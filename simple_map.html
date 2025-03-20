@@ -44,63 +44,184 @@
         // Center the map on the rectangle
         map.fitBounds(rectangle.getBounds());
 
-        // Variables to track dragging state
+        // Variables to track interaction state
         let isDragging = false;
+        let isResizing = false;
         let lastPos = null;
+        let resizeEdge = null;
+        let edgeThreshold = 0.01; // Threshold for edge detection (in degrees)
 
-        // Make rectangle draggable
+        // Check if the point is near an edge
+        function getResizeEdge(point, bounds) {
+            const north = bounds.getNorth();
+            const south = bounds.getSouth();
+            const east = bounds.getEast();
+            const west = bounds.getWest();
+            
+            // Check each edge with threshold
+            if (Math.abs(point.lat - north) < edgeThreshold) {
+                if (Math.abs(point.lng - east) < edgeThreshold) {
+                    return 'ne';
+                } else if (Math.abs(point.lng - west) < edgeThreshold) {
+                    return 'nw';
+                } else {
+                    return 'n';
+                }
+            } else if (Math.abs(point.lat - south) < edgeThreshold) {
+                if (Math.abs(point.lng - east) < edgeThreshold) {
+                    return 'se';
+                } else if (Math.abs(point.lng - west) < edgeThreshold) {
+                    return 'sw';
+                } else {
+                    return 's';
+                }
+            } else if (Math.abs(point.lng - east) < edgeThreshold) {
+                return 'e';
+            } else if (Math.abs(point.lng - west) < edgeThreshold) {
+                return 'w';
+            }
+            
+            return null;
+        }
+
+        // Set appropriate cursor based on edge
+        function updateCursor(edge) {
+            if (!edge) {
+                rectangle._path.style.cursor = '';
+                return;
+            }
+            
+            switch (edge) {
+                case 'n':
+                case 's':
+                    rectangle._path.style.cursor = 'ns-resize';
+                    break;
+                case 'e':
+                case 'w':
+                    rectangle._path.style.cursor = 'ew-resize';
+                    break;
+                case 'ne':
+                case 'sw':
+                    rectangle._path.style.cursor = 'nesw-resize';
+                    break;
+                case 'nw':
+                case 'se':
+                    rectangle._path.style.cursor = 'nwse-resize';
+                    break;
+                default:
+                    rectangle._path.style.cursor = 'move';
+            }
+        }
+
+        // Change cursor on mousemove
+        rectangle.on('mousemove', function(e) {
+            if (isDragging || isResizing) return;
+            
+            const edge = getResizeEdge(e.latlng, rectangle.getBounds());
+            updateCursor(edge);
+        });
+
+        // Make rectangle interactive
         rectangle.on('mousedown', function(e) {
-            isDragging = true;
+            const bounds = rectangle.getBounds();
+            const edge = getResizeEdge(e.latlng, bounds);
+            
+            if (edge) {
+                isResizing = true;
+                resizeEdge = edge;
+            } else {
+                isDragging = true;
+            }
+            
             lastPos = e.latlng;
             map.dragging.disable(); // Disable map dragging
             
             // Prevent event propagation
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
-            
-            // Change cursor to indicate dragging
-            rectangle._path.style.cursor = 'move';
         });
 
-        // Use document events to ensure smooth dragging even if mouse moves fast
+        // Handle mouse movement
         document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
+            if (!isDragging && !isResizing) return;
             
             // Convert screen position to map coordinates
             const containerPoint = new L.Point(e.clientX, e.clientY);
             const layerPoint = map.containerPointToLayerPoint(containerPoint);
             const latlng = map.layerPointToLatLng(layerPoint);
             
-            // Calculate the movement delta
-            const latDiff = latlng.lat - lastPos.lat;
-            const lngDiff = latlng.lng - lastPos.lng;
-            
-            // Get current bounds and shift by the movement delta
             const currentBounds = rectangle.getBounds();
-            const newBounds = [
-                [currentBounds.getSouthWest().lat + latDiff, currentBounds.getSouthWest().lng + lngDiff],
-                [currentBounds.getNorthEast().lat + latDiff, currentBounds.getNorthEast().lng + lngDiff]
-            ];
+            let sw = currentBounds.getSouthWest();
+            let ne = currentBounds.getNorthEast();
             
-            // Update rectangle position
-            rectangle.setBounds(newBounds);
+            if (isDragging) {
+                // Calculate the movement delta
+                const latDiff = latlng.lat - lastPos.lat;
+                const lngDiff = latlng.lng - lastPos.lng;
+                
+                // Update rectangle position
+                rectangle.setBounds([
+                    [sw.lat + latDiff, sw.lng + lngDiff],
+                    [ne.lat + latDiff, ne.lng + lngDiff]
+                ]);
+                
+            } else if (isResizing) {
+                // Update the appropriate coordinate based on which edge is being resized
+                switch (resizeEdge) {
+                    case 'n':
+                        ne = L.latLng(latlng.lat, ne.lng);
+                        break;
+                    case 's':
+                        sw = L.latLng(latlng.lat, sw.lng);
+                        break;
+                    case 'e':
+                        ne = L.latLng(ne.lat, latlng.lng);
+                        break;
+                    case 'w':
+                        sw = L.latLng(sw.lat, latlng.lng);
+                        break;
+                    case 'ne':
+                        ne = latlng;
+                        break;
+                    case 'nw':
+                        ne = L.latLng(latlng.lat, ne.lng);
+                        sw = L.latLng(sw.lat, latlng.lng);
+                        break;
+                    case 'se':
+                        ne = L.latLng(ne.lat, latlng.lng);
+                        sw = L.latLng(latlng.lat, sw.lng);
+                        break;
+                    case 'sw':
+                        sw = latlng;
+                        break;
+                }
+                
+                rectangle.setBounds([sw, ne]);
+            }
             
             // Update last position
             lastPos = latlng;
         });
 
+        // End interaction on mouseup
         document.addEventListener('mouseup', function() {
-            if (!isDragging) return;
+            if (!(isDragging || isResizing)) return;
             
-            // End dragging
+            // End interaction
             isDragging = false;
+            isResizing = false;
+            resizeEdge = null;
             lastPos = null;
             
             // Re-enable map dragging
             map.dragging.enable();
-            
-            // Reset cursor
-            rectangle._path.style.cursor = '';
+        });
+
+        // Reset cursor when mouse leaves the rectangle
+        rectangle.on('mouseout', function() {
+            if (!(isDragging || isResizing)) {
+                rectangle._path.style.cursor = '';
+            }
         });
     </script>
 </body>
