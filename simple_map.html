@@ -392,6 +392,27 @@
         
         // Add click event to download button
         document.getElementById('downloadBtn').addEventListener('click', downloadCorners);
+
+        // Add event listener for zoom end to maintain rotation
+        map.on('zoomend', function() {
+            if (rectangle) {
+                applyRotation();
+            }
+        });
+        
+        // Add event listener for map move end to maintain rotation
+        map.on('moveend', function() {
+            if (rectangle) {
+                applyRotation();
+            }
+        });
+        
+        // Ensure rotation is maintained when panning as well
+        map.on('drag', function() {
+            if (rectangle) {
+                applyRotation();
+            }
+        });
     </script>
 </body>
 </html>
