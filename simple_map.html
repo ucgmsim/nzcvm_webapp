@@ -14,10 +14,40 @@
             width: 100%;
             height: 100vh;
         }
+        .rotation-instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .download-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background-color: #fff;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+        }
+        .download-btn:hover {
+            background-color: #f4f4f4;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div class="rotation-instructions">
+        Hold 'R' key while dragging to rotate the rectangle
+    </div>
+    <button class="download-btn" id="downloadBtn">Download Corners</button>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -47,9 +77,43 @@
         // Variables to track interaction state
         let isDragging = false;
         let isResizing = false;
+        let isRotating = false;
         let lastPos = null;
         let resizeEdge = null;
+        let rotationAngle = 0;
+        let rectangleCenter = null;
         let edgeThreshold = 0.01; // Threshold for edge detection (in degrees)
+        let rKeyPressed = false;
+        
+        // Add key event listeners
+        document.addEventListener('keydown', function(e) {
+            if (e.key.toLowerCase() === 'r') {
+                rKeyPressed = true;
+            }
+        });
+        
+        document.addEventListener('keyup', function(e) {
+            if (e.key.toLowerCase() === 'r') {
+                rKeyPressed = false;
+            }
+        });
+
+        // Function to apply rotation to rectangle
+        function applyRotation() {
+            const center = rectangle.getBounds().getCenter();
+            rectangleCenter = center;
+            
+            // Apply rotation transformation using CSS
+            rectangle._path.style.transformOrigin = `${map.latLngToLayerPoint(center).x}px ${map.latLngToLayerPoint(center).y}px`;
+            rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
+        }
+        
+        // Calculate angle between three points
+        function calculateAngle(center, p1, p2) {
+            const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
+            const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
+            return ((angle2 - angle1) * 180 / Math.PI);
+        }
 
         // Check if the point is near an edge
         function getResizeEdge(point, bounds) {
@@ -115,7 +179,7 @@
 
         // Change cursor on mousemove
         rectangle.on('mousemove', function(e) {
-            if (isDragging || isResizing) return;
+            if (isDragging || isResizing || isRotating) return;
             
             const edge = getResizeEdge(e.latlng, rectangle.getBounds());
             updateCursor(edge);
@@ -126,7 +190,12 @@
             const bounds = rectangle.getBounds();
             const edge = getResizeEdge(e.latlng, bounds);
             
-            if (edge) {
+            // Store rectangle center for rotation calculations
+            rectangleCenter = bounds.getCenter();
+            
+            if (rKeyPressed) {
+                isRotating = true;
+            } else if (edge) {
                 isResizing = true;
                 resizeEdge = edge;
             } else {
@@ -143,21 +212,28 @@
 
         // Handle mouse movement
         document.addEventListener('mousemove', function(e) {
-            if (!isDragging && !isResizing) return;
+            if (!isDragging && !isResizing && !isRotating) return;
             
             // Convert screen position to map coordinates
             const containerPoint = new L.Point(e.clientX, e.clientY);
             const layerPoint = map.containerPointToLayerPoint(containerPoint);
             const latlng = map.layerPointToLatLng(layerPoint);
             
-            const currentBounds = rectangle.getBounds();
-            let sw = currentBounds.getSouthWest();
-            let ne = currentBounds.getNorthEast();
-            
-            if (isDragging) {
+            if (isRotating && rectangleCenter) {
+                // Calculate rotation angle
+                const angleDelta = calculateAngle(rectangleCenter, lastPos, latlng);
+                rotationAngle = (rotationAngle + angleDelta) % 360;
+                
+                // Apply the rotation
+                applyRotation();
+            } else if (isDragging) {
                 // Calculate the movement delta
                 const latDiff = latlng.lat - lastPos.lat;
                 const lngDiff = latlng.lng - lastPos.lng;
+                
+                const currentBounds = rectangle.getBounds();
+                const sw = currentBounds.getSouthWest();
+                const ne = currentBounds.getNorthEast();
                 
                 // Update rectangle position
                 rectangle.setBounds([
@@ -165,7 +241,14 @@
                     [ne.lat + latDiff, ne.lng + lngDiff]
                 ]);
                 
+                // Reapply rotation after moving
+                applyRotation();
+                
             } else if (isResizing) {
+                const currentBounds = rectangle.getBounds();
+                let sw = currentBounds.getSouthWest();
+                let ne = currentBounds.getNorthEast();
+                
                 // Update the appropriate coordinate based on which edge is being resized
                 switch (resizeEdge) {
                     case 'n':
@@ -197,6 +280,9 @@
                 }
                 
                 rectangle.setBounds([sw, ne]);
+                
+                // Reapply rotation after resizing
+                applyRotation();
             }
             
             // Update last position
@@ -205,11 +291,12 @@
 
         // End interaction on mouseup
         document.addEventListener('mouseup', function() {
-            if (!(isDragging || isResizing)) return;
+            if (!(isDragging || isResizing || isRotating)) return;
             
             // End interaction
             isDragging = false;
             isResizing = false;
+            isRotating = false;
             resizeEdge = null;
             lastPos = null;
             
@@ -219,10 +306,92 @@
 
         // Reset cursor when mouse leaves the rectangle
         rectangle.on('mouseout', function() {
-            if (!(isDragging || isResizing)) {
+            if (!(isDragging || isResizing || isRotating)) {
                 rectangle._path.style.cursor = '';
             }
         });
+        
+        // Initialize rotation
+        applyRotation();
+
+        // Function to calculate rotated corners
+        function calculateRotatedCorners() {
+            const bounds = rectangle.getBounds();
+            const center = bounds.getCenter();
+            
+            // Get the corners in non-rotated state
+            const corners = [
+                [bounds.getNorth(), bounds.getWest()], // NorthWest
+                [bounds.getNorth(), bounds.getEast()], // NorthEast
+                [bounds.getSouth(), bounds.getEast()], // SouthEast
+                [bounds.getSouth(), bounds.getWest()]  // SouthWest
+            ];
+            
+            // Convert to points for rotation calculation
+            const centerPoint = map.latLngToLayerPoint(center);
+            
+            // Apply rotation to each corner
+            return corners.map(corner => {
+                const cornerLatLng = L.latLng(corner[0], corner[1]);
+                const cornerPoint = map.latLngToLayerPoint(cornerLatLng);
+                
+                // Calculate rotated point
+                const angleRad = rotationAngle * Math.PI / 180;
+                const x = centerPoint.x + (cornerPoint.x - centerPoint.x) * Math.cos(angleRad) - 
+                                       (cornerPoint.y - centerPoint.y) * Math.sin(angleRad);
+                const y = centerPoint.y + (cornerPoint.x - centerPoint.x) * Math.sin(angleRad) + 
+                                       (cornerPoint.y - centerPoint.y) * Math.cos(angleRad);
+                
+                // Convert back to LatLng
+                return map.layerPointToLatLng(new L.Point(x, y));
+            });
+        }
+        
+        // Function to calculate distance between two points in km (Haversine formula)
+        function calculateDistanceInKm(point1, point2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+            
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+                    
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Function to download corner coordinates
+        function downloadCorners() {
+            const corners = calculateRotatedCorners();
+            let content = "Rectangle Corners (Latitude, Longitude):\n";
+            
+            corners.forEach((corner, index) => {
+                content += `Corner ${index + 1}: ${corner.lat.toFixed(6)}, ${corner.lng.toFixed(6)}\n`;
+            });
+            
+            // Calculate side lengths in km
+            content += "\nSide Lengths (kilometers):\n";
+            for (let i = 0; i < corners.length; i++) {
+                const nextIndex = (i + 1) % corners.length;
+                const distance = calculateDistanceInKm(corners[i], corners[nextIndex]);
+                content += `Side ${i+1} to ${nextIndex+1}: ${distance.toFixed(3)} km\n`;
+            }
+            
+            // Create blob and download
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rectangle_corners.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Add click event to download button
+        document.getElementById('downloadBtn').addEventListener('click', downloadCorners);
     </script>
 </body>
 </html>
