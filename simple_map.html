@@ -126,20 +126,20 @@
         <h2>Rectangle Properties</h2>
         <form id="rectangle-form">
             <div class="form-group">
-                <label for="southwest-lat">Southwest Corner (Lat):</label>
-                <input type="number" id="southwest-lat" step="0.000001">
+                <label for="origin-lat">Origin (Lat):</label>
+                <input type="number" id="origin-lat" step="0.000001">
             </div>
             <div class="form-group">
-                <label for="southwest-lng">Southwest Corner (Lng):</label>
-                <input type="number" id="southwest-lng" step="0.000001">
+                <label for="origin-lng">Origin (Lng):</label>
+                <input type="number" id="origin-lng" step="0.000001">
             </div>
             <div class="form-group">
-                <label for="northeast-lat">Northeast Corner (Lat):</label>
-                <input type="number" id="northeast-lat" step="0.000001">
+                <label for="extent-x">Extent X (km):</label>
+                <input type="number" id="extent-x" step="0.001">
             </div>
             <div class="form-group">
-                <label for="northeast-lng">Northeast Corner (Lng):</label>
-                <input type="number" id="northeast-lng" step="0.000001">
+                <label for="extent-y">Extent Y (km):</label>
+                <input type="number" id="extent-y" step="0.001">
             </div>
             <div class="form-group">
                 <label for="rotation">Rotation (degrees):</label>
@@ -347,6 +347,49 @@
             }
         });
 
+        // Function to convert kilometers to degrees latitude/longitude
+        function kmToDegrees(km, centerLat) {
+            // Earth's radius in km at the equator
+            const earthRadius = 6371;
+            
+            // Conversion for latitude is straightforward
+            const latDegrees = km / 111.32; // 1 degree latitude is approximately 111.32 km
+            
+            // Longitude depends on the latitude due to the Earth's curvature
+            const latRadians = centerLat * (Math.PI / 180);
+            const lngDegrees = km / (111.32 * Math.cos(latRadians));
+            
+            return { lat: latDegrees, lng: lngDegrees };
+        }
+        
+        // Function to convert degrees to kilometers
+        function degreesToKm(lat, lng, centerLat) {
+            const latKm = lat * 111.32; // 1 degree latitude is approximately 111.32 km
+            
+            const latRadians = centerLat * (Math.PI / 180);
+            const lngKm = lng * (111.32 * Math.cos(latRadians));
+            
+            return { latKm, lngKm };
+        }
+        
+        // Function to calculate rectangle bounds from origin and extents
+        function calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, extentY) {
+            // Convert extents from kilometers to degrees
+            const extentsDegrees = kmToDegrees(extentX / 2, originLat);
+            const extentsDegreesY = kmToDegrees(extentY / 2, originLat);
+            
+            // Calculate southwest and northeast corners
+            const swLat = originLat - extentsDegreesY.lat;
+            const swLng = originLng - extentsDegrees.lng;
+            const neLat = originLat + extentsDegreesY.lat;
+            const neLng = originLng + extentsDegrees.lng;
+            
+            return [
+                [swLat, swLng], // Southwest corner
+                [neLat, neLng]  // Northeast corner
+            ];
+        }
+
         // Function to apply rotation to rectangle
         function applyRotation() {
             const center = rectangle.getBounds().getCenter();
@@ -363,10 +406,19 @@
         // Function to update form with current rectangle bounds
         function updateFormValues() {
             const bounds = rectangle.getBounds();
-            document.getElementById('southwest-lat').value = bounds.getSouth().toFixed(6);
-            document.getElementById('southwest-lng').value = bounds.getWest().toFixed(6);
-            document.getElementById('northeast-lat').value = bounds.getNorth().toFixed(6);
-            document.getElementById('northeast-lng').value = bounds.getEast().toFixed(6);
+            const center = bounds.getCenter();
+            const originLat = center.lat;
+            const originLng = center.lng;
+            
+            // Calculate extents in kilometers
+            const width = degreesToKm(0, bounds.getEast() - bounds.getWest(), originLat).lngKm;
+            const height = degreesToKm(bounds.getNorth() - bounds.getSouth(), 0, originLat).latKm;
+            
+            // Update form fields
+            document.getElementById('origin-lat').value = originLat.toFixed(6);
+            document.getElementById('origin-lng').value = originLng.toFixed(6);
+            document.getElementById('extent-x').value = width.toFixed(3);
+            document.getElementById('extent-y').value = height.toFixed(3);
             document.getElementById('rotation').value = rotationAngle.toFixed(1);
         }
         
@@ -375,18 +427,18 @@
         
         // Handle form submission to update rectangle
         document.getElementById('apply-btn').addEventListener('click', function() {
-            const swLat = parseFloat(document.getElementById('southwest-lat').value);
-            const swLng = parseFloat(document.getElementById('southwest-lng').value);
-            const neLat = parseFloat(document.getElementById('northeast-lat').value);
-            const neLng = parseFloat(document.getElementById('northeast-lng').value);
+            const originLat = parseFloat(document.getElementById('origin-lat').value);
+            const originLng = parseFloat(document.getElementById('origin-lng').value);
+            const extentX = parseFloat(document.getElementById('extent-x').value);
+            const extentY = parseFloat(document.getElementById('extent-y').value);
             const newRotation = parseFloat(document.getElementById('rotation').value);
             
-            if (!isNaN(swLat) && !isNaN(swLng) && !isNaN(neLat) && !isNaN(neLng)) {
+            if (!isNaN(originLat) && !isNaN(originLng) && !isNaN(extentX) && !isNaN(extentY)) {
+                // Calculate new bounds from origin and extents
+                const newBounds = calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, extentY);
+                
                 // Update rectangle bounds
-                rectangle.setBounds([
-                    [swLat, swLng],
-                    [neLat, neLng]
-                ]);
+                rectangle.setBounds(newBounds);
                 
                 // Update rotation if changed
                 if (!isNaN(newRotation) && newRotation !== rotationAngle) {
