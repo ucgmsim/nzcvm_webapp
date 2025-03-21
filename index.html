@@ -13,11 +13,10 @@
         <div class="rotation-instructions">
             Hold 'R' key while dragging to rotate the rectangle
         </div>
-        <button class="download-btn" id="downloadBtn">Download Corners</button>
     </div>
     
     <div id="form-container">
-        <h2>Rectangle Properties</h2>
+        <h2>Model Parameters</h2>
         <form id="rectangle-form">
             <div class="form-group">
                 <label for="origin-lat">Origin (Lat):</label>
@@ -51,6 +50,9 @@
                 </select>
             </div>
         </form>
+        
+        <!-- Download button moved below the form -->
+        <button class="download-btn" id="downloadBtn">Download configuration file</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

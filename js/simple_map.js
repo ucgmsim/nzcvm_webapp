@@ -113,6 +113,9 @@ function loadGeoJSON(filename) {
             
             // Remove loading indicator
             document.getElementById('loading-indicator').remove();
+            
+            // Ensure rectangle stays on top of GeoJSON layer
+            rectangle.bringToFront();
         })
         .catch(error => {
             const errorMsg = error.message || 'Unknown error';
