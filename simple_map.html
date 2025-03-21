@@ -63,7 +63,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 8px;
             box-sizing: border-box;
@@ -87,6 +87,29 @@
         }
         .apply-btn:hover {
             background-color: #45a049;
+        }
+        .section-header {
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .legend {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            line-height: 18px;
+            color: #555;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -123,6 +146,16 @@
                 <input type="number" id="rotation" step="0.1">
             </div>
             <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
+            
+            <div class="section-header">Map Overlays</div>
+            <div class="form-group">
+                <label for="geojson-overlay">Basin Overlay:</label>
+                <select id="geojson-overlay">
+                    <option value="">None</option>
+                    <option value="model_version_2p03_basins.geojson">Model Version 2.03 Basins</option>
+                    <option value="model_version_2p07_basins.geojson">Model Version 2.07 Basins</option>
+                </select>
+            </div>
         </form>
     </div>
 
@@ -150,6 +183,145 @@
         
         // Center the map on the rectangle
         map.fitBounds(rectangle.getBounds());
+
+        // Variables for GeoJSON overlay
+        let currentGeoJSONLayer = null;
+        let legend = null;
+
+        // Function to add a legend to the map
+        function addLegend() {
+            if (legend) {
+                map.removeControl(legend);
+            }
+            
+            legend = L.control({position: 'bottomright'});
+            legend.onAdd = function() {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = '<h4>Basin Regions</h4>' +
+                               '<i style="background:#ba0045"></i> Basin Areas<br>';
+                return div;
+            };
+            legend.addTo(map);
+        }
+
+        // Function to load and display GeoJSON
+        function loadGeoJSON(filename) {
+            // Clear existing GeoJSON layer if any
+            if (currentGeoJSONLayer) {
+                map.removeLayer(currentGeoJSONLayer);
+                currentGeoJSONLayer = null;
+                if (legend) {
+                    map.removeControl(legend);
+                    legend = null;
+                }
+            }
+            
+            if (!filename) return;
+            
+            // Path to GeoJSON files - update path to include nzcvm2_domain_website subdirectory
+            const geoJsonUrl = 'nzcvm2_domain_website/basins/' + filename;
+            
+            // Create a loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading-indicator';
+            loadingDiv.style.position = 'absolute';
+            loadingDiv.style.top = '50%';
+            loadingDiv.style.left = '50%';
+            loadingDiv.style.transform = 'translate(-50%, -50%)';
+            loadingDiv.style.background = 'white';
+            loadingDiv.style.padding = '10px';
+            loadingDiv.style.borderRadius = '5px';
+            loadingDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            loadingDiv.style.zIndex = '1000';
+            loadingDiv.innerText = 'Loading GeoJSON data...';
+            document.getElementById('map-container').appendChild(loadingDiv);
+            
+            console.log('Attempting to load GeoJSON from:', geoJsonUrl);
+            
+            // Fetch the GeoJSON file
+            fetch(geoJsonUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Use performance optimized approach for GeoJSON rendering
+                    currentGeoJSONLayer = L.geoJSON(data, {
+                        style: function() {
+                            return {
+                                color: "#ba0045",
+                                weight: 1,
+                                fillOpacity: 0.3
+                            };
+                        },
+                        // Use custom filter to reduce the number of features if needed
+                        filter: function(feature) {
+                            // Only include features that have coordinates
+                            return feature.geometry && 
+                                   feature.geometry.coordinates && 
+                                   feature.geometry.coordinates.length > 0 &&
+                                   feature.geometry.coordinates[0].length > 0;
+                        },
+                        onEachFeature: function(feature, layer) {
+                            if (feature.properties && feature.properties.source_file) {
+                                layer.bindTooltip(feature.properties.source_file);
+                            }
+                        }
+                    }).addTo(map);
+                    
+                    // Add legend
+                    addLegend();
+                    
+                    // Remove loading indicator
+                    document.getElementById('loading-indicator').remove();
+                })
+                .catch(error => {
+                    const errorMsg = error.message || 'Unknown error';
+                    console.error('Error loading GeoJSON:', error);
+                    
+                    // Create a more detailed error message
+                    const detailedAlert = document.createElement('div');
+                    detailedAlert.id = 'error-message';
+                    detailedAlert.style.position = 'absolute';
+                    detailedAlert.style.top = '50%';
+                    detailedAlert.style.left = '50%';
+                    detailedAlert.style.transform = 'translate(-50%, -50%)';
+                    detailedAlert.style.background = 'white';
+                    detailedAlert.style.padding = '15px';
+                    detailedAlert.style.borderRadius = '5px';
+                    detailedAlert.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+                    detailedAlert.style.zIndex = '1000';
+                    detailedAlert.style.maxWidth = '80%';
+                    detailedAlert.style.textAlign = 'left';
+                    detailedAlert.innerHTML = `
+                        <h3 style="color: red; margin-top: 0;">Error Loading GeoJSON</h3>
+                        <p><strong>File:</strong> ${filename}</p>
+                        <p><strong>URL:</strong> ${geoJsonUrl}</p>
+                        <p><strong>Error:</strong> ${errorMsg}</p>
+                        <p>Please check the console for more details.</p>
+                        <button id="close-error" style="padding: 5px 10px; float: right;">Close</button>
+                    `;
+                    document.getElementById('map-container').appendChild(detailedAlert);
+                    
+                    // Add event listener to close button
+                    document.getElementById('close-error').addEventListener('click', function() {
+                        document.getElementById('error-message').remove();
+                    });
+                    
+                    // Remove loading indicator if it exists
+                    const loadingIndicator = document.getElementById('loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                });
+        }
+
+        // Add change event listener for GeoJSON selection
+        document.getElementById('geojson-overlay').addEventListener('change', function() {
+            loadGeoJSON(this.value);
+        });
 
         // Variables to track interaction state
         let isDragging = false;
@@ -543,3 +715,18 @@
     </script>
 </body>
 </html>
+<!-- 
+To view this page properly, you need to run a local web server:
+
+Method 1 (Python):
+1. Open a terminal/command prompt
+2. Navigate to the nzcvm2_domain_website directory
+3. Run: python -m http.server 8000
+4. Open a browser and go to: http://localhost:8000/simple_map.html
+
+Method 2 (Node.js):
+1. Install http-server: npm install -g http-server
+2. Navigate to the nzcvm2_domain_website directory  
+3. Run: http-server
+4. Open the URL shown in the terminal
+-->
