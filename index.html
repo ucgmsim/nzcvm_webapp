@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Map with Rectangle</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="rotation-instructions">
+            Hold 'R' key while dragging to rotate the rectangle
+        </div>
+        <button class="download-btn" id="downloadBtn">Download Corners</button>
+    </div>
+    
+    <div id="form-container">
+        <h2>Rectangle Properties</h2>
+        <form id="rectangle-form">
+            <div class="form-group">
+                <label for="origin-lat">Origin (Lat):</label>
+                <input type="number" id="origin-lat" step="0.000001">
+            </div>
+            <div class="form-group">
+                <label for="origin-lng">Origin (Lng):</label>
+                <input type="number" id="origin-lng" step="0.000001">
+            </div>
+            <div class="form-group">
+                <label for="extent-x">Extent X (km):</label>
+                <input type="number" id="extent-x" step="0.001">
+            </div>
+            <div class="form-group">
+                <label for="extent-y">Extent Y (km):</label>
+                <input type="number" id="extent-y" step="0.001">
+            </div>
+            <div class="form-group">
+                <label for="rotation">Rotation (degrees):</label>
+                <input type="number" id="rotation" step="0.1">
+            </div>
+            <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
+            
+            <div class="section-header">Map Overlays</div>
+            <div class="form-group">
+                <label for="geojson-overlay">Basin Overlay:</label>
+                <select id="geojson-overlay">
+                    <option value="">None</option>
+                    <option value="model_version_2p03_basins.geojson">Model Version 2.03 Basins</option>
+                    <option value="model_version_2p07_basins.geojson">Model Version 2.07 Basins</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Load our custom JavaScript -->
+    <script src="js/simple_map.js"></script>
+</body>
+</html>
+<!-- 
+To view this page properly, you need to run a local web server:
+
+Method 1 (Python):
+1. Open a terminal/command prompt
+2. Navigate to the nzcvm2_domain_website directory
+3. Run: python -m http.server 8000
+4. Open a browser and go to: http://localhost:8000/
+
+Method 2 (Node.js):
+1. Install http-server: npm install -g http-server
+2. Navigate to the nzcvm2_domain_website directory  
+3. Run: http-server
+4. Open the URL shown in the terminal
+-->
