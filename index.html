@@ -38,6 +38,37 @@
                 <label for="rotation">Rotation (degrees):</label>
                 <input type="number" id="rotation" step="0.1">
             </div>
+            
+            <!-- Additional parameters -->
+            <div class="section-header">Additional Parameters</div>
+            <div class="form-group">
+                <label for="latlon-spacing">Lat/Lon Spacing (km):</label>
+                <input type="number" id="latlon-spacing" step="0.1" value="1.1">
+            </div>
+            <div class="form-group">
+                <label for="extent-zmax">Extent Z Max (km):</label>
+                <input type="number" id="extent-zmax" value="45.0">
+            </div>
+            <div class="form-group">
+                <label for="extent-zmin">Extent Z Min (km):</label>
+                <input type="number" id="extent-zmin" value="0.0">
+            </div>
+            <div class="form-group">
+                <label for="z-spacing">Z Spacing (km):</label>
+                <input type="number" id="z-spacing" step="0.1" value="0.2">
+            </div>
+            <div class="form-group">
+                <label for="min-vs">Min Vs (m/s):</label>
+                <input type="number" id="min-vs" step="0.1" value="0.5">
+            </div>
+            <div class="form-group">
+                <label for="model-version">Model Version:</label>
+                <select id="model-version">
+                    <option value="2.03">2.03</option>
+                    <option value="2.07">2.07</option>
+                </select>
+            </div>
+            
             <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
             
             <div class="section-header">Map Overlays</div>

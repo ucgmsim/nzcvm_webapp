@@ -555,26 +555,60 @@ function calculateDistanceInKm(point1, point2) {
 // Function to download corner coordinates
 function downloadCorners() {
     const corners = calculateRotatedCorners();
-    let content = "Rectangle Corners (Latitude, Longitude):\n";
     
+    // Get form values for configuration file
+    const originLat = parseFloat(document.getElementById('origin-lat').value);
+    const originLng = parseFloat(document.getElementById('origin-lng').value);
+    const extentX = parseFloat(document.getElementById('extent-x').value);
+    const extentY = parseFloat(document.getElementById('extent-y').value);
+    const rotation = parseFloat(document.getElementById('rotation').value);
+    
+    // Get additional parameters
+    const latlonSpacing = parseFloat(document.getElementById('latlon-spacing').value);
+    const extentZmax = parseFloat(document.getElementById('extent-zmax').value);
+    const extentZmin = parseFloat(document.getElementById('extent-zmin').value);
+    const zSpacing = parseFloat(document.getElementById('z-spacing').value);
+    const minVs = parseFloat(document.getElementById('min-vs').value);
+    const modelVersion = document.getElementById('model-version').value;
+    
+    // Create configuration file content
+    const config = [
+        'CALL_TYPE=GENERATE_VELOCITY_MOD',
+        `MODEL_VERSION=${modelVersion}`,
+        `ORIGIN_LAT=${originLat.toFixed(6)}`,
+        `ORIGIN_LON=${originLng.toFixed(6)}`,
+        `ORIGIN_ROT=${rotation.toFixed(1)}`,
+        `EXTENT_X=${extentX.toFixed(3)}`,
+        `EXTENT_Y=${extentY.toFixed(3)}`,
+        `EXTENT_ZMAX=${extentZmax.toFixed(1)}`,
+        `EXTENT_ZMIN=${extentZmin.toFixed(1)}`,
+        `EXTENT_Z_SPACING=${zSpacing.toFixed(1)}`,
+        `EXTENT_LATLON_SPACING=${latlonSpacing.toFixed(1)}`,
+        `MIN_VS=${minVs.toFixed(1)}`,
+        'TOPO_TYPE=BULLDOZED',
+        'OUTPUT_DIR=/tmp'
+    ].join('\n');
+    
+    // Add corner coordinates as comments to the configuration file
+    let cornerInfo = '\n\n# Rectangle Corner Coordinates (Latitude, Longitude):\n';
     corners.forEach((corner, index) => {
-        content += `Corner ${index + 1}: ${corner.lat.toFixed(6)}, ${corner.lng.toFixed(6)}\n`;
+        cornerInfo += `# Corner ${index + 1}: ${corner.lat.toFixed(6)}, ${corner.lng.toFixed(6)}\n`;
     });
     
-    // Calculate side lengths in km
-    content += "\nSide Lengths (kilometers):\n";
+    // Add side lengths as comments
+    cornerInfo += '\n# Side Lengths (kilometers):\n';
     for (let i = 0; i < corners.length; i++) {
         const nextIndex = (i + 1) % corners.length;
         const distance = calculateDistanceInKm(corners[i], corners[nextIndex]);
-        content += `Side ${i+1} to ${nextIndex+1}: ${distance.toFixed(3)} km\n`;
+        cornerInfo += `# Side ${i+1} to ${nextIndex+1}: ${distance.toFixed(3)} km\n`;
     }
     
     // Create blob and download
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([config + cornerInfo], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'rectangle_corners.txt';
+    a.download = 'nzvm.cfg';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
