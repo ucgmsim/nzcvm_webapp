@@ -220,8 +220,8 @@
             const latlng = map.layerPointToLatLng(layerPoint);
             
             if (isRotating && rectangleCenter) {
-                // Calculate rotation angle
-                const angleDelta = calculateAngle(rectangleCenter, lastPos, latlng);
+                // Calculate rotation angle and reverse the direction
+                const angleDelta = -calculateAngle(rectangleCenter, lastPos, latlng);
                 rotationAngle = (rotationAngle + angleDelta) % 360;
                 
                 // Apply the rotation
