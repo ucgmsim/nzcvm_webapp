@@ -520,7 +520,7 @@ rectangle.on('mouseout', function() {
 applyRotation();
 
 // Function to download corner coordinates
-function downloadCorners() {
+function downloadConfigFile() {
     // Get form values for configuration file
     const originLat = parseFloat(document.getElementById('origin-lat').value);
     const originLng = parseFloat(document.getElementById('origin-lng').value);
@@ -569,7 +569,7 @@ function downloadCorners() {
 }
 
 // Add click event to download button
-document.getElementById('downloadBtn').addEventListener('click', downloadCorners);
+document.getElementById('downloadBtn').addEventListener('click', downloadConfigFile);
 
 // Add event listener for zoom end to maintain rotation
 map.on('zoomend', function() {
