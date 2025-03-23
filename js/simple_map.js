@@ -585,6 +585,7 @@ function downloadCorners() {
     const minVs = parseFloat(document.getElementById('min-vs').value);
     const modelVersion = document.getElementById('model-version').value;
     const topoType = document.getElementById('topo-type').value;
+    const outputDir = document.getElementById('output-dir').value || '/tmp';
     
     // Create configuration file content
     const config = [
@@ -601,7 +602,7 @@ function downloadCorners() {
         `EXTENT_LATLON_SPACING=${latlonSpacing.toFixed(1)}`,
         `MIN_VS=${minVs.toFixed(1)}`,
         `TOPO_TYPE=${topoType}`,
-        'OUTPUT_DIR=/tmp'
+        `OUTPUT_DIR=${outputDir}`
     ].join('\n');
     
     // Add corner coordinates as comments to the configuration file

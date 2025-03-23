@@ -77,6 +77,7 @@ h2 {
     cursor: pointer;
     font-size: 16px;
     margin-top: 10px;
+    width: 100%;
 }
 .apply-btn:hover {
     background-color: #45a049;
