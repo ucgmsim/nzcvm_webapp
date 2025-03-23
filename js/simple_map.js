@@ -519,57 +519,8 @@ rectangle.on('mouseout', function() {
 // Initialize rotation
 applyRotation();
 
-// Function to calculate rotated corners
-function calculateRotatedCorners() {
-    const bounds = rectangle.getBounds();
-    const center = bounds.getCenter();
-    
-    // Get the corners in non-rotated state
-    const corners = [
-        [bounds.getNorth(), bounds.getWest()], // NorthWest
-        [bounds.getNorth(), bounds.getEast()], // NorthEast
-        [bounds.getSouth(), bounds.getEast()], // SouthEast
-        [bounds.getSouth(), bounds.getWest()]  // SouthWest
-    ];
-    
-    // Convert to points for rotation calculation
-    const centerPoint = map.latLngToLayerPoint(center);
-    
-    // Apply rotation to each corner
-    return corners.map(corner => {
-        const cornerLatLng = L.latLng(corner[0], corner[1]);
-        const cornerPoint = map.latLngToLayerPoint(cornerLatLng);
-        
-        // Calculate rotated point
-        const angleRad = rotationAngle * Math.PI / 180;
-        const x = centerPoint.x + (cornerPoint.x - centerPoint.x) * Math.cos(angleRad) - 
-                               (cornerPoint.y - centerPoint.y) * Math.sin(angleRad);
-        const y = centerPoint.y + (cornerPoint.x - centerPoint.x) * Math.sin(angleRad) + 
-                               (cornerPoint.y - centerPoint.y) * Math.cos(angleRad);
-        
-        // Convert back to LatLng
-        return map.layerPointToLatLng(new L.Point(x, y));
-    });
-}
-
-// Function to calculate distance between two points in km (Haversine formula)
-function calculateDistanceInKm(point1, point2) {
-    const R = 6371; // Earth's radius in km
-    const dLat = (point2.lat - point1.lat) * Math.PI / 180;
-    const dLon = (point2.lng - point1.lng) * Math.PI / 180;
-    
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-            
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
 // Function to download corner coordinates
 function downloadCorners() {
-    const corners = calculateRotatedCorners();
-    
     // Get form values for configuration file
     const originLat = parseFloat(document.getElementById('origin-lat').value);
     const originLng = parseFloat(document.getElementById('origin-lng').value);
@@ -605,22 +556,8 @@ function downloadCorners() {
         `OUTPUT_DIR=${outputDir}`
     ].join('\n');
     
-    // Add corner coordinates as comments to the configuration file
-    let cornerInfo = '\n\n# Rectangle Corner Coordinates (Latitude, Longitude):\n';
-    corners.forEach((corner, index) => {
-        cornerInfo += `# Corner ${index + 1}: ${corner.lat.toFixed(6)}, ${corner.lng.toFixed(6)}\n`;
-    });
-    
-    // Add side lengths as comments
-    cornerInfo += '\n# Side Lengths (kilometers):\n';
-    for (let i = 0; i < corners.length; i++) {
-        const nextIndex = (i + 1) % corners.length;
-        const distance = calculateDistanceInKm(corners[i], corners[nextIndex]);
-        cornerInfo += `# Side ${i+1} to ${nextIndex+1}: ${distance.toFixed(3)} km\n`;
-    }
-    
     // Create blob and download
-    const blob = new Blob([config + cornerInfo], { type: 'text/plain' });
+    const blob = new Blob([config], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
