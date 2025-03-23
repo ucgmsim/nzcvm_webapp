@@ -41,8 +41,8 @@ function addLegend() {
     legend.addTo(map);
 }
 
-// Function to load and display GeoJSON
-function loadGeoJSON(filename) {
+// Function to load and display GeoJSON based on model version
+function loadGeoJSONByModelVersion(modelVersion) {
     // Clear existing GeoJSON layer if any
     if (currentGeoJSONLayer) {
         map.removeLayer(currentGeoJSONLayer);
@@ -53,7 +53,15 @@ function loadGeoJSON(filename) {
         }
     }
     
-    if (!filename) return;
+    // Map model version to corresponding GeoJSON file
+    let filename = '';
+    if (modelVersion === '2.03') {
+        filename = 'model_version_2p03_basins.geojson';
+    } else if (modelVersion === '2.07') {
+        filename = 'model_version_2p07_basins.geojson';
+    } else {
+        return; // No valid model version selected
+    }
     
     // Updated path to GeoJSON files with new structure
     const geoJsonUrl = 'data/basins/' + filename;
@@ -158,9 +166,15 @@ function loadGeoJSON(filename) {
         });
 }
 
-// Add change event listener for GeoJSON selection
-document.getElementById('geojson-overlay').addEventListener('change', function() {
-    loadGeoJSON(this.value);
+// Add change event listener for model version selection
+document.getElementById('model-version').addEventListener('change', function() {
+    loadGeoJSONByModelVersion(this.value);
+});
+
+// Load initial GeoJSON based on default selected model version
+document.addEventListener('DOMContentLoaded', function() {
+    const initialModelVersion = document.getElementById('model-version').value;
+    loadGeoJSONByModelVersion(initialModelVersion);
 });
 
 // Variables to track interaction state
@@ -570,6 +584,7 @@ function downloadCorners() {
     const zSpacing = parseFloat(document.getElementById('z-spacing').value);
     const minVs = parseFloat(document.getElementById('min-vs').value);
     const modelVersion = document.getElementById('model-version').value;
+    const topoType = document.getElementById('topo-type').value;
     
     // Create configuration file content
     const config = [
@@ -585,7 +600,7 @@ function downloadCorners() {
         `EXTENT_Z_SPACING=${zSpacing.toFixed(1)}`,
         `EXTENT_LATLON_SPACING=${latlonSpacing.toFixed(1)}`,
         `MIN_VS=${minVs.toFixed(1)}`,
-        'TOPO_TYPE=BULLDOZED',
+        `TOPO_TYPE=${topoType}`,
         'OUTPUT_DIR=/tmp'
     ].join('\n');
     

@@ -69,17 +69,17 @@
                 </select>
             </div>
             
-            <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
-            
-            <div class="section-header">Map Overlays</div>
             <div class="form-group">
-                <label for="geojson-overlay">Basin Overlay:</label>
-                <select id="geojson-overlay">
-                    <option value="">None</option>
-                    <option value="model_version_2p03_basins.geojson">Model Version 2.03 Basins</option>
-                    <option value="model_version_2p07_basins.geojson">Model Version 2.07 Basins</option>
+                <label for="topo-type">Topo Type:</label>
+                <select id="topo-type">
+                    <option value="BULLDOZED">BULLDOZED</option>
+                    <option value="SQUASHED">SQUASHED</option>
+                    <option value="SQUASHED_TAPERED">SQUASHED_TAPERED</option>
+                    <option value="TRUE">TRUE</option>
                 </select>
             </div>
+            
+            <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
         </form>
         
         <!-- Download button moved below the form -->
