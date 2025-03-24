@@ -130,3 +130,27 @@ h2 {
     font-size: 14px;
     color: white;
 }
+
+/* Styles for resize handle */
+.resize-handle-icon {
+    cursor: nwse-resize;
+}
+
+.resize-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #3498db;
+    border: 2px solid white;
+    box-shadow: 0 0 3px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+.resize-icon:before {
+    content: "↘";
+    position: absolute;
+    top: -1px;
+    left: 2px;
+    font-size: 14px;
+    color: white;
+}
