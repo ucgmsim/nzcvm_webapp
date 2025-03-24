@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Map with Rectangle</title>
+    <title>NZCVM2 config map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
     <div id="map-container">
         <div id="map"></div>
-        <div class="rotation-instructions">
-            Click and drag the rotation handle to rotate the rectangle
+        <div class="use-instructions">
+            <p>Guide</p>
+            <ul>
+                <li><strong>Move:</strong> Click and drag the rectangle.</li>
+                <li><strong>Resize:</strong> Click and drag the edges or corners.</li>
+                <li><strong>Rotate:</strong> Click and drag the rotation handle.</li>
+            </ul>
         </div>
     </div>
     
@@ -85,27 +90,11 @@
             <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
         </form>
         
-        <!-- Download button moved below the form -->
         <button class="download-btn" id="downloadBtn">Download configuration file</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Load our custom JavaScript -->
+    <!-- Load custom JavaScript -->
     <script src="js/nzcvm2_config_map.js"></script>
 </body>
 </html>
-<!-- 
-To view this page properly, you need to run a local web server:
-
-Method 1 (Python):
-1. Open a terminal/command prompt
-2. Navigate to the nzcvm2_domain_website directory
-3. Run: python -m http.server 8000
-4. Open a browser and go to: http://localhost:8000/
-
-Method 2 (Node.js):
-1. Install http-server: npm install -g http-server
-2. Navigate to the nzcvm2_domain_website directory  
-3. Run: http-server
-4. Open the URL shown in the terminal
--->

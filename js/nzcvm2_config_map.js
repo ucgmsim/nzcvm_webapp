@@ -6,11 +6,19 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
+// Define initial parameters for the rectangle
+const initialOriginLat = -41.2865;
+const initialOriginLng = 174.7762;
+const initialExtentX = 300; // width in km
+const initialExtentY = 300; // height in km
+
 // Create a rectangle around Wellington
-const bounds = [
-    [-41.3, 174.7], // Southwest corner
-    [-41.2, 174.8]  // Northeast corner
-];
+const bounds = calculateBoundsFromOriginAndExtents(
+    initialOriginLat,
+    initialOriginLng,
+    initialExtentX,
+    initialExtentY
+);
 
 const rectangle = L.rectangle(bounds, {
     color: "#ff7800",
@@ -18,8 +26,7 @@ const rectangle = L.rectangle(bounds, {
     fillOpacity: 0.2
 }).addTo(map);
 
-// Center the map on the rectangle
-map.fitBounds(rectangle.getBounds());
+
 
 // Variables for GeoJSON overlay
 let currentGeoJSONLayer = null;
