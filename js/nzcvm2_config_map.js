@@ -25,6 +25,11 @@ map.fitBounds(rectangle.getBounds());
 let currentGeoJSONLayer = null;
 let legend = null;
 
+// New variables for rotation handle
+let rotationHandle = null;
+let rotationLine = null;
+let rotationHandleDistance = 50; // pixels
+
 // Function to add a legend to the map
 function addLegend() {
     if (legend) {
@@ -186,20 +191,124 @@ let resizeEdge = null;
 let rotationAngle = 0;
 let rectangleCenter = null;
 let edgeThreshold = 0.01; // Threshold for edge detection (in degrees)
-let rKeyPressed = false;
 
-// Add key event listeners
-document.addEventListener('keydown', function(e) {
-    if (e.key.toLowerCase() === 'r') {
-        rKeyPressed = true;
-    }
+// Create rotation handle icon
+const rotationIcon = L.divIcon({
+    className: 'rotation-handle-icon',
+    html: '<div class="rotation-icon"></div>',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
 });
 
-document.addEventListener('keyup', function(e) {
-    if (e.key.toLowerCase() === 'r') {
-        rKeyPressed = false;
+// Function to create and position the rotation handle
+function createRotationHandle() {
+    if (rotationHandle) {
+        map.removeLayer(rotationHandle);
     }
-});
+    
+    if (rotationLine) {
+        map.removeLayer(rotationLine);
+    }
+    
+    // Get the center and bounds of the rectangle
+    const bounds = rectangle.getBounds();
+    const center = bounds.getCenter();
+    rectangleCenter = center;
+    
+    // Calculate position for rotation handle at a fixed distance from the top edge
+    updateRotationHandlePosition();
+    
+    // Apply rotation to handle and line
+    updateRotationHandlePosition();
+}
+
+// Function to update rotation handle position when rectangle is moved or rotated
+function updateRotationHandlePosition() {
+    if (!rectangle) return;
+    
+    // Remove existing handle and line if they exist
+    if (rotationHandle) {
+        map.removeLayer(rotationHandle);
+    }
+    
+    if (rotationLine) {
+        map.removeLayer(rotationLine);
+    }
+    
+    const bounds = rectangle.getBounds();
+    const center = bounds.getCenter();
+    
+    // Calculate the top center point of the rectangle (before rotation)
+    const topCenter = L.latLng((bounds.getNorth()), center.lng);
+    
+    // Calculate the position with rotation applied
+    const centerPoint = map.latLngToLayerPoint(center);
+    const topCenterPoint = map.latLngToLayerPoint(topCenter);
+    
+    // Calculate vector from center to top center
+    const vecX = topCenterPoint.x - centerPoint.x;
+    const vecY = topCenterPoint.y - centerPoint.y;
+    
+    // Apply rotation to this vector
+    const angle = rotationAngle * (Math.PI / 180);
+    const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
+    const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
+    
+    // Calculate the rotated top center point
+    const rotatedTopCenterX = centerPoint.x + rotatedVecX;
+    const rotatedTopCenterY = centerPoint.y + rotatedVecY;
+    const rotatedTopCenterPoint = L.point(rotatedTopCenterX, rotatedTopCenterY);
+    
+    // Calculate the handle position at a fixed distance from the rotated top center
+    const handleX = rotatedTopCenterX + rotationHandleDistance * Math.sin(angle);
+    const handleY = rotatedTopCenterY - rotationHandleDistance * Math.cos(angle);
+    const handlePoint = L.point(handleX, handleY);
+    
+    const rotatedTopCenter = map.layerPointToLatLng(rotatedTopCenterPoint);
+    const handleLatLng = map.layerPointToLatLng(handlePoint);
+    
+    // Create the rotation handle
+    rotationHandle = L.marker(handleLatLng, {
+        icon: rotationIcon,
+        draggable: false,
+        zIndexOffset: 1000
+    }).addTo(map);
+    
+    // Add click handler to rotation handle
+    rotationHandle.on('mousedown', function(e) {
+        isRotating = true;
+        lastPos = e.latlng;
+        map.dragging.disable(); // Disable map dragging while rotating
+        
+        // Prevent event propagation
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
+    });
+    
+    // Create connecting line from top center of rectangle to handle
+    rotationLine = L.polyline([rotatedTopCenter, handleLatLng], {
+        color: '#ff7800',
+        weight: 1.5,
+        opacity: 0.7,
+        dashArray: '5, 5'
+    }).addTo(map);
+}
+
+// Function to apply rotation to rectangle
+function applyRotation() {
+    const center = rectangle.getBounds().getCenter();
+    rectangleCenter = center;
+    
+    // Apply rotation transformation using CSS
+    rectangle._path.style.transformOrigin = `${map.latLngToLayerPoint(center).x}px ${map.latLngToLayerPoint(center).y}px`;
+    rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
+    
+    // Update form with new rotation value
+    document.getElementById('rotation').value = rotationAngle.toFixed(1);
+    
+    // Update rotation handle position
+    updateRotationHandlePosition();
+}
 
 // Function to convert kilometers to degrees latitude/longitude
 function kmToDegrees(km, centerLat) {
@@ -242,19 +351,6 @@ function calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, exte
         [swLat, swLng], // Southwest corner
         [neLat, neLng]  // Northeast corner
     ];
-}
-
-// Function to apply rotation to rectangle
-function applyRotation() {
-    const center = rectangle.getBounds().getCenter();
-    rectangleCenter = center;
-    
-    // Apply rotation transformation using CSS
-    rectangle._path.style.transformOrigin = `${map.latLngToLayerPoint(center).x}px ${map.latLngToLayerPoint(center).y}px`;
-    rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
-    
-    // Update form with new rotation value
-    document.getElementById('rotation').value = rotationAngle.toFixed(1);
 }
 
 // Function to update form with current rectangle bounds
@@ -389,9 +485,7 @@ rectangle.on('mousedown', function(e) {
     // Store rectangle center for rotation calculations
     rectangleCenter = bounds.getCenter();
     
-    if (rKeyPressed) {
-        isRotating = true;
-    } else if (edge) {
+    if (edge) {
         isResizing = true;
         resizeEdge = edge;
     } else {
@@ -516,8 +610,41 @@ rectangle.on('mouseout', function() {
     }
 });
 
-// Initialize rotation
-applyRotation();
+// Initialize rotation and rotation handle
+map.on('layeradd', function(e) {
+    if (e.layer === rectangle) {
+        // Wait a bit to ensure rectangle is properly initialized
+        setTimeout(function() {
+            applyRotation();
+            createRotationHandle();
+        }, 100);
+    }
+});
+
+// Add these event listeners to update rotation handle when map changes
+map.on('zoomend', function() {
+    if (rectangle) {
+        applyRotation();
+        updateRotationHandlePosition();
+    }
+});
+
+map.on('moveend', function() {
+    if (rectangle) {
+        applyRotation();
+        updateRotationHandlePosition();
+    }
+});
+
+map.on('drag', function() {
+    if (rectangle) {
+        applyRotation();
+        updateRotationHandlePosition();
+    }
+});
+
+// Initialize rotation handle after rectangle is created
+setTimeout(createRotationHandle, 500);
 
 // Function to download corner coordinates
 function downloadConfigFile() {
@@ -570,24 +697,3 @@ function downloadConfigFile() {
 
 // Add click event to download button
 document.getElementById('downloadBtn').addEventListener('click', downloadConfigFile);
-
-// Add event listener for zoom end to maintain rotation
-map.on('zoomend', function() {
-    if (rectangle) {
-        applyRotation();
-    }
-});
-
-// Add event listener for map move end to maintain rotation
-map.on('moveend', function() {
-    if (rectangle) {
-        applyRotation();
-    }
-});
-
-// Ensure rotation is maintained when panning as well
-map.on('drag', function() {
-    if (rectangle) {
-        applyRotation();
-    }
-});
