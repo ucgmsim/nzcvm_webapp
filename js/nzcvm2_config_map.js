@@ -599,8 +599,14 @@ document.addEventListener('mousemove', function(e) {
         const initialHeight = origSWPoint.y - origNEPoint.y; // Y is inverted in screen coords
         
         // Calculate scale factors (avoid division by zero)
-        const scaleX = (initialWidth + projectionOnWidth) / initialWidth || 1;
-        const scaleY = (initialHeight + projectionOnHeight) / initialHeight || 1;
+        let scaleX = (initialWidth + projectionOnWidth) / initialWidth || 1;
+        let scaleY = (initialHeight + projectionOnHeight) / initialHeight || 1;
+        
+        // Prevent rectangle inversion by enforcing minimum scale factor
+        // This ensures sides cannot move through each other
+        const minScale = 0.05; // Minimum scale to prevent near-zero sizes
+        scaleX = Math.max(scaleX, minScale);
+        scaleY = Math.max(scaleY, minScale);
         
         // Calculate new corners by scaling from the center
         const width = Math.abs(origNE.lng - origSW.lng) * scaleX;
