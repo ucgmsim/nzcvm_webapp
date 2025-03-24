@@ -416,41 +416,118 @@ function calculateAngle(center, p1, p2) {
 
 // Check if the point is near an edge
 function getResizeEdge(point, bounds) {
-    const north = bounds.getNorth();
-    const south = bounds.getSouth();
-    const east = bounds.getEast();
-    const west = bounds.getWest();
+    // Get rectangle corners in correct order
+    const center = bounds.getCenter();
+    const width = bounds.getEast() - bounds.getWest();
+    const height = bounds.getNorth() - bounds.getSouth();
     
-    // Check each edge with threshold
-    if (Math.abs(point.lat - north) < edgeThreshold) {
-        if (Math.abs(point.lng - east) < edgeThreshold) {
-            return 'ne';
-        } else if (Math.abs(point.lng - west) < edgeThreshold) {
-            return 'nw';
-        } else {
-            return 'n';
+    // Convert mouse point to layer point
+    const pointLatLng = L.latLng(point.lat, point.lng);
+    const pointLayerPoint = map.latLngToLayerPoint(pointLatLng);
+    
+    // Calculate the four corners based on non-rotated bounds
+    const centerPoint = map.latLngToLayerPoint(center);
+    const halfWidthPx = map.latLngToLayerPoint(L.latLng(center.lat, center.lng + width/2)).x - centerPoint.x;
+    const halfHeightPx = centerPoint.y - map.latLngToLayerPoint(L.latLng(center.lat + height/2, center.lng)).y;
+    
+    // Create corner points (top-left, top-right, bottom-right, bottom-left)
+    const corners = [
+        {x: centerPoint.x - halfWidthPx, y: centerPoint.y - halfHeightPx}, // top-left
+        {x: centerPoint.x + halfWidthPx, y: centerPoint.y - halfHeightPx}, // top-right
+        {x: centerPoint.x + halfWidthPx, y: centerPoint.y + halfHeightPx}, // bottom-right
+        {x: centerPoint.x - halfWidthPx, y: centerPoint.y + halfHeightPx}  // bottom-left
+    ];
+    
+    // Rotate the corners
+    const angle = rotationAngle * (Math.PI / 180);
+    const rotatedCorners = corners.map(corner => {
+        return {
+            x: centerPoint.x + (corner.x - centerPoint.x) * Math.cos(angle) - (corner.y - centerPoint.y) * Math.sin(angle),
+            y: centerPoint.y + (corner.x - centerPoint.x) * Math.sin(angle) + (corner.y - centerPoint.y) * Math.cos(angle)
+        };
+    });
+    
+    // Calculate edges (as line segments between corners)
+    const edges = [
+        { start: rotatedCorners[0], end: rotatedCorners[1], type: 'n' },  // top
+        { start: rotatedCorners[1], end: rotatedCorners[2], type: 'e' },  // right
+        { start: rotatedCorners[2], end: rotatedCorners[3], type: 's' },  // bottom
+        { start: rotatedCorners[3], end: rotatedCorners[0], type: 'w' }   // left
+    ];
+    
+    // Distance threshold in pixels
+    const thresholdPx = 10;
+    
+    // Find the closest edge
+    let closestEdge = null;
+    let minDistance = Infinity;
+    
+    edges.forEach(edge => {
+        const distance = distanceToLine(pointLayerPoint, edge.start, edge.end);
+        if (distance < thresholdPx && distance < minDistance) {
+            minDistance = distance;
+            closestEdge = edge.type;
         }
-    } else if (Math.abs(point.lat - south) < edgeThreshold) {
-        if (Math.abs(point.lng - east) < edgeThreshold) {
-            return 'se';
-        } else if (Math.abs(point.lng - west) < edgeThreshold) {
-            return 'sw';
-        } else {
-            return 's';
+    });
+    
+    // Check corners (with slightly larger threshold for easier corner grabbing)
+    const cornerThresholdPx = 15;
+    const cornerTypes = ['nw', 'ne', 'se', 'sw'];
+    
+    for (let i = 0; i < rotatedCorners.length; i++) {
+        const corner = rotatedCorners[i];
+        const distance = Math.sqrt(
+            Math.pow(pointLayerPoint.x - corner.x, 2) + 
+            Math.pow(pointLayerPoint.y - corner.y, 2)
+        );
+        
+        if (distance < cornerThresholdPx && distance < minDistance) {
+            minDistance = distance;
+            closestEdge = cornerTypes[i];
         }
-    } else if (Math.abs(point.lng - east) < edgeThreshold) {
-        return 'e';
-    } else if (Math.abs(point.lng - west) < edgeThreshold) {
-        return 'w';
     }
     
-    return null;
+    return closestEdge;
+}
+
+// Calculate distance from point to line segment
+function distanceToLine(point, lineStart, lineEnd) {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+    
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    let param = -1;
+    
+    if (len_sq !== 0) {
+        param = dot / len_sq;
+    }
+    
+    let xx, yy;
+    
+    if (param < 0) {
+        xx = lineStart.x;
+        yy = lineStart.y;
+    } else if (param > 1) {
+        xx = lineEnd.x;
+        yy = lineEnd.y;
+    } else {
+        xx = lineStart.x + param * C;
+        yy = lineStart.y + param * D;
+    }
+    
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+    
+    return Math.sqrt(dx * dx + dy * dy);
 }
 
 // Set appropriate cursor based on edge
 function updateCursor(edge) {
     if (!edge) {
-        rectangle._path.style.cursor = '';
+        rectangle._path.style.cursor = 'move';
         return;
     }
     
@@ -476,7 +553,7 @@ function updateCursor(edge) {
     }
 }
 
-// Change cursor on mousemove
+// Change cursor on mousemove - this handler will use our improved edge detection
 rectangle.on('mousemove', function(e) {
     if (isDragging || isResizing || isRotating) return;
     
