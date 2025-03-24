@@ -566,34 +566,61 @@ document.addEventListener('mousemove', function(e) {
         // Update form values
         updateFormValues();
     } else if (isResizing && rectangleCenter && initialResizeHandlePos && initialRectBounds) {
-        // Calculate how much the mouse has moved from its initial position
-        const latDiff = latlng.lat - initialResizeHandlePos.lat;
-        const lngDiff = latlng.lng - initialResizeHandlePos.lng;
+        // Get current mouse position and initial handle position in screen coordinates
+        const currentMousePoint = map.latLngToContainerPoint(latlng);
+        const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
+        const centerPoint = map.latLngToContainerPoint(rectangleCenter);
         
-        // Get the original bounds
+        // Get the initial rectangle corners
         const origSW = initialRectBounds.getSouthWest();
         const origNE = initialRectBounds.getNorthEast();
         
-        // Calculate new northeast corner by adding movement to the original corner
-        let newLat = origNE.lat + latDiff;
-        let newLng = origNE.lng + lngDiff;
+        // Calculate the initial width and height vectors in screen coordinates
+        // These represent the rotated axes of the rectangle
+        const origWidthVectorX = Math.cos(rotationAngle * Math.PI / 180);
+        const origWidthVectorY = Math.sin(rotationAngle * Math.PI / 180);
+        const origHeightVectorX = -Math.sin(rotationAngle * Math.PI / 180);
+        const origHeightVectorY = Math.cos(rotationAngle * Math.PI / 180);
         
-        // Set minimum size (in degrees) based on a fraction of the original size
-        const minLatSize = Math.max((origNE.lat - origSW.lat) * 0.1, 0.01);
-        const minLngSize = Math.max((origNE.lng - origSW.lng) * 0.1, 0.01);
+        // Calculate mouse movement vector
+        const dx = currentMousePoint.x - initialMousePoint.x;
+        const dy = currentMousePoint.y - initialMousePoint.y;
         
-        // Ensure we don't resize below minimum size
-        if (newLat < origSW.lat + minLatSize) newLat = origSW.lat + minLatSize;
-        if (newLng < origSW.lng + minLngSize) newLng = origSW.lng + minLngSize;
+        // Project mouse movement onto the rotated axes of the rectangle
+        // This gives us how much to resize in each direction
+        const projectionOnWidth = dx * origWidthVectorX + dy * origWidthVectorY;
+        // Negate the height projection to correct the vertical direction
+        const projectionOnHeight = -(dx * origHeightVectorX + dy * origHeightVectorY);
         
-        // Create new bounds with the original SW and new NE
-        const newBounds = L.latLngBounds(
-            origSW,
-            L.latLng(newLat, newLng)
-        );
+        // Get initial rectangle dimensions in screen coordinates
+        const origSWPoint = map.latLngToContainerPoint(origSW);
+        const origNEPoint = map.latLngToContainerPoint(origNE);
+        const initialWidth = origNEPoint.x - origSWPoint.x;
+        const initialHeight = origSWPoint.y - origNEPoint.y; // Y is inverted in screen coords
         
-        // Update rectangle with the new bounds
+        // Calculate scale factors (avoid division by zero)
+        const scaleX = (initialWidth + projectionOnWidth) / initialWidth || 1;
+        const scaleY = (initialHeight + projectionOnHeight) / initialHeight || 1;
+        
+        // Calculate new corners by scaling from the center
+        const width = Math.abs(origNE.lng - origSW.lng) * scaleX;
+        const height = Math.abs(origNE.lat - origSW.lat) * scaleY;
+        const center = initialRectBounds.getCenter();
+        
+        // Calculate new bounds
+        const halfWidthLng = width / 2;
+        const halfHeightLat = height / 2;
+        const newSW = L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLng);
+        const newNE = L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLng);
+        
+        // Create and apply new bounds
+        const newBounds = L.latLngBounds(newSW, newNE);
         rectangle.setBounds(newBounds);
+        
+        // Update the resize handle position to match the mouse position
+        if (resizeHandle) {
+            resizeHandle.setLatLng(latlng);
+        }
         
         // Reapply rotation
         applyRotation();
