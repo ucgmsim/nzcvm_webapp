@@ -331,8 +331,12 @@ function applyRotation() {
     const center = rectangle.getBounds().getCenter();
     rectangleCenter = center;
     
-    // Apply rotation transformation using CSS
-    rectangle._path.style.transformOrigin = `${map.latLngToLayerPoint(center).x}px ${map.latLngToLayerPoint(center).y}px`;
+    // Get the current pixel position of the center
+    const centerPoint = map.latLngToLayerPoint(center);
+    
+    // Apply rotation transformation using CSS with absolute coordinates
+    // This ensures rotation works correctly at any zoom level
+    rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
     rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
     
     // Update form with new rotation value
@@ -673,10 +677,20 @@ map.on('layeradd', function(e) {
 });
 
 // Update handles when map changes
-map.on('zoomend moveend drag', function() {
+map.on('zoomend moveend dragend zoom move viewreset', function() {
     if (rectangle) {
+        // Ensure rectangle rotation is properly maintained after any map change
         applyRotation();
     }
+});
+
+// Add event handler for when the map is redrawn
+map.on('redraw', function() {
+    setTimeout(function() {
+        if (rectangle) {
+            applyRotation();
+        }
+    }, 50);
 });
 
 // Initialize rotation and resize handles
