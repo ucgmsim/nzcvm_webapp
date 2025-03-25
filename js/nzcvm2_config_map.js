@@ -39,20 +39,17 @@ let rotationHandleDistance = 50; // pixels
 let resizeHandle = null;
 let resizeLine = null;
 
-// Add these variables at the top with other variables
-let initialRectWidth = 0;
-let initialRectHeight = 0;
-let initialMouseDistance = 0;
-let initialMousePos = null;
-let initialSouthWest = null;
-
-// Add these variables with other variables
-let initialNorthEast = null;
-let initialMouseVector = null;
-
-// Add these variables with other variables
+// Variables for resize operations
 let initialResizeHandlePos = null;
 let initialRectBounds = null;
+
+// Variables to track interaction state
+let isDragging = false;
+let isResizing = false;
+let isRotating = false;
+let lastPos = null;
+let rotationAngle = 0;
+let rectangleCenter = null;
 
 // Function to add a legend to the map
 function addLegend() {
@@ -205,16 +202,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialModelVersion = document.getElementById('model-version').value;
     loadGeoJSONByModelVersion(initialModelVersion);
 });
-
-// Variables to track interaction state
-let isDragging = false;
-let isResizing = false;
-let isRotating = false;
-let lastPos = null;
-let resizeEdge = null;
-let rotationAngle = 0;
-let rectangleCenter = null;
-let edgeThreshold = 0.01; // Threshold for edge detection (in degrees)
 
 // Create rotation handle icon
 const rotationIcon = L.divIcon({
@@ -575,59 +562,46 @@ document.addEventListener('mousemove', function(e) {
         const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
         const centerPoint = map.latLngToContainerPoint(rectangleCenter);
         
-        // Get the initial rectangle corners
-        const origSW = initialRectBounds.getSouthWest();
-        const origNE = initialRectBounds.getNorthEast();
-        
-        // Calculate the initial width and height vectors in screen coordinates
-        // These represent the rotated axes of the rectangle
-        const origWidthVectorX = Math.cos(rotationAngle * Math.PI / 180);
-        const origWidthVectorY = Math.sin(rotationAngle * Math.PI / 180);
-        const origHeightVectorX = -Math.sin(rotationAngle * Math.PI / 180);
-        const origHeightVectorY = Math.cos(rotationAngle * Math.PI / 180);
+        // Calculate rotation vectors once (optimization)
+        const angle = rotationAngle * Math.PI / 180;
+        const cosAngle = Math.cos(angle);
+        const sinAngle = Math.sin(angle);
         
         // Calculate mouse movement vector
         const dx = currentMousePoint.x - initialMousePoint.x;
         const dy = currentMousePoint.y - initialMousePoint.y;
         
         // Project mouse movement onto the rotated axes of the rectangle
-        // This gives us how much to resize in each direction
-        const projectionOnWidth = dx * origWidthVectorX + dy * origWidthVectorY;
-        // Negate the height projection to correct the vertical direction
-        const projectionOnHeight = -(dx * origHeightVectorX + dy * origHeightVectorY);
+        const projectionOnWidth = dx * cosAngle + dy * sinAngle;
+        const projectionOnHeight = -(dx * -sinAngle + dy * cosAngle);
         
-        // Get initial rectangle dimensions in screen coordinates
+        // Get initial rectangle dimensions
+        const origSW = initialRectBounds.getSouthWest();
+        const origNE = initialRectBounds.getNorthEast();
         const origSWPoint = map.latLngToContainerPoint(origSW);
         const origNEPoint = map.latLngToContainerPoint(origNE);
         const initialWidth = origNEPoint.x - origSWPoint.x;
-        const initialHeight = origSWPoint.y - origNEPoint.y; // Y is inverted in screen coords
+        const initialHeight = origSWPoint.y - origNEPoint.y;
         
-        // Calculate scale factors (avoid division by zero)
-        let scaleX = (initialWidth + projectionOnWidth) / initialWidth || 1;
-        let scaleY = (initialHeight + projectionOnHeight) / initialHeight || 1;
-        
-        // Prevent rectangle inversion by enforcing minimum scale factor
-        // This ensures sides cannot move through each other
-        const minScale = 0.05; // Minimum scale to prevent near-zero sizes
-        scaleX = Math.max(scaleX, minScale);
-        scaleY = Math.max(scaleY, minScale);
-        
-        // Calculate new corners by scaling from the center
-        const width = Math.abs(origNE.lng - origSW.lng) * scaleX;
-        const height = Math.abs(origNE.lat - origSW.lat) * scaleY;
-        const center = initialRectBounds.getCenter();
+        // Calculate scale factors with minimum scale limit
+        const minScale = 0.05;
+        let scaleX = Math.max((initialWidth + projectionOnWidth) / initialWidth || 1, minScale);
+        let scaleY = Math.max((initialHeight + projectionOnHeight) / initialHeight || 1, minScale);
         
         // Calculate new bounds
+        const center = initialRectBounds.getCenter();
+        const width = Math.abs(origNE.lng - origSW.lng) * scaleX;
+        const height = Math.abs(origNE.lat - origSW.lat) * scaleY;
         const halfWidthLng = width / 2;
         const halfHeightLat = height / 2;
-        const newSW = L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLng);
-        const newNE = L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLng);
         
-        // Create and apply new bounds
-        const newBounds = L.latLngBounds(newSW, newNE);
+        const newBounds = L.latLngBounds(
+            L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLng),
+            L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLng)
+        );
         rectangle.setBounds(newBounds);
         
-        // Update the resize handle position to match the mouse position
+        // Update the resize handle position
         if (resizeHandle) {
             resizeHandle.setLatLng(latlng);
         }
