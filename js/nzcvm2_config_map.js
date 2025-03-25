@@ -234,10 +234,7 @@ function createRotationHandle() {
     const center = bounds.getCenter();
     rectangleCenter = center;
     
-    // Calculate position for rotation handle at a fixed distance from the top edge
-    updateRotationHandlePosition();
-    
-    // Apply rotation to handle and line
+    // Apply rotation to handle and line (only need to call this once)
     updateRotationHandlePosition();
 }
 
