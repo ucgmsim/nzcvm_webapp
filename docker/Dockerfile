@@ -4,7 +4,7 @@ FROM python:3.12-alpine
 
 # Uses Alpine's package manager `apk` to install the necessary packages (`git`, `nginx`) 
 # without caching, which helps keep the image size small.
-RUN apk add --no-cache git nginx curl
+RUN apk add --no-cache git nginx
 
 # Clone the repository with the dev branch into the created directory
 RUN git clone -b dev https://github.com/ucgmsim/nzcvm_config.git /nzcvm_config
