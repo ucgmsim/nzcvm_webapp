@@ -6,8 +6,8 @@ FROM python:3.12-alpine
 # without caching, which helps keep the image size small.
 RUN apk add --no-cache git nginx
 
-# Clone the repository with the dev branch into the created directory
-RUN git clone -b dev https://github.com/ucgmsim/nzcvm_config.git /nzcvm_config
+# Clone the repository
+RUN git clone https://github.com/ucgmsim/nzcvm_config.git /nzcvm_config
 
 # Changes the ownership of the `/nzcvm_config` directory (and its contents) 
 # recursively to the user and group “nobody” for improved security.
