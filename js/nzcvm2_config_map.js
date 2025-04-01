@@ -261,7 +261,7 @@ function updateRotationHandlePosition() {
     const center = bounds.getCenter();
 
     // Calculate the top center point of the rectangle (before rotation)
-    const topCenter = L.latLng((bounds.getNorth()), center.lng);
+    const topCenter = L.latLng(bounds.getNorth(), center.lng);
 
     // Calculate the position with rotation applied
     const centerPoint = map.latLngToLayerPoint(center);
