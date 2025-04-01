@@ -86,7 +86,7 @@ function loadGeoJSONByModelVersion(modelVersion) {
     } else if (modelVersion === '2.07') {
         filename = 'model_version_2p07_basins.geojson.gz';
     } else {
-        return; // No valid model version selected
+        throw new Error(`No valid model version selected: ${modelVersion}.`);
     }
 
     // Updated path to GeoJSON files with new structure
