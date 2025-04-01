@@ -133,14 +133,6 @@ function loadGeoJSONByModelVersion(modelVersion) {
                         fillOpacity: 0.3
                     };
                 },
-                // Use custom filter to reduce the number of features if needed
-                filter: function(feature) {
-                    // Only include features that have coordinates
-                    return feature.geometry &&
-                           feature.geometry.coordinates &&
-                           feature.geometry.coordinates.length > 0 &&
-                           feature.geometry.coordinates[0].length > 0;
-                },
                 onEachFeature: function(feature, layer) {
                     if (feature.properties && feature.properties.source_file) {
                         layer.bindTooltip(feature.properties.source_file);
@@ -717,7 +709,7 @@ function downloadConfigFile() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'nzvm.cfg';
+    a.download = 'nzcvm.cfg';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
