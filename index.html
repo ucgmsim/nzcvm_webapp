@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NZCVM2 config map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="use-instructions">
+            <p>Guide</p>
+            <ul>
+                <li><strong>Move:</strong> Click and drag the rectangle.</li>
+                <li><strong>Resize:</strong> Click and drag the blue handle in the corner.</li>
+                <li><strong>Rotate:</strong> Click and drag the orange rotation handle.</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div id="form-container">
+        <h2>Model Parameters</h2>
+        <form id="rectangle-form">
+            <div class="form-group">
+                <label for="origin-lat">Origin Latitude:</label>
+                <input type="number" id="origin-lat" step="0.000001">
+            </div>
+            <div class="form-group">
+                <label for="origin-lng">Origin Longitude:</label>
+                <input type="number" id="origin-lng" step="0.000001">
+            </div>
+            <div class="form-group">
+                <label for="extent-x">Extent X (km):</label>
+                <input type="number" id="extent-x" step="0.001">
+            </div>
+            <div class="form-group">
+                <label for="extent-y">Extent Y (km):</label>
+                <input type="number" id="extent-y" step="0.001">
+            </div>
+            <div class="form-group">
+                <label for="rotation">Rotation (degrees):</label>
+                <input type="number" id="rotation" step="0.1">
+            </div>           
+
+            <div class="form-group">
+                <label for="latlon-spacing">Lat/Lon Spacing (km):</label>
+                <input type="number" id="latlon-spacing" step="0.1" value="0.9">
+            </div>
+            <div class="form-group">
+                <label for="extent-zmax">Extent Z Max (km):</label>
+                <input type="number" id="extent-zmax" value="45.0">
+            </div>
+            <div class="form-group">
+                <label for="extent-zmin">Extent Z Min (km):</label>
+                <input type="number" id="extent-zmin" value="0.0">
+            </div>
+            <div class="form-group">
+                <label for="z-spacing">Z Spacing (km):</label>
+                <input type="number" id="z-spacing" step="0.1" value="0.2">
+            </div>
+            <div class="form-group">
+                <label for="min-vs">Min Vs (m/s):</label>
+                <input type="number" id="min-vs" step="0.1" value="0.5">
+            </div>
+            <div class="form-group">
+                <label for="model-version">Model Version:</label>
+                <select id="model-version">
+                    <option value="2.03">2.03</option>
+                    <option value="2.07">2.07</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="topo-type">Topo Type:</label>
+                <select id="topo-type">
+                    <option value="BULLDOZED">BULLDOZED</option>
+                    <option value="SQUASHED">SQUASHED</option>
+                    <option value="SQUASHED_TAPERED">SQUASHED_TAPERED</option>
+                    <option value="TRUE">TRUE</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="output-dir">Output Directory:</label>
+                <input type="text" id="output-dir" value="/tmp">
+            </div>
+            
+            <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
+        </form>
+        
+        <button class="download-btn" id="downloadBtn">Download configuration file</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Load custom JavaScript -->
+    <script src="js/nzcvm2_config_map.js"></script>
+</body>
+</html>
