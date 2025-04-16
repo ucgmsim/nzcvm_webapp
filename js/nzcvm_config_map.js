@@ -84,7 +84,7 @@ function parseLocationFile(fileContent) {
         // Split by any whitespace (spaces, tabs)
         const parts = line.trim().split(/\s+/);
 
-        // We need at least 3 parts: longitude, latitude, label
+        // Extract longitude, latitude, and label
         if (parts.length >= 3) {
             const lng = parseFloat(parts[0]);
             const lat = parseFloat(parts[1]);
