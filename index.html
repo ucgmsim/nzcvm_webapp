@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="css/styles.css" />
 </head>
+
 <body>
     <div id="map-container">
         <div id="map"></div>
@@ -19,7 +21,7 @@
             </ul>
         </div>
     </div>
-    
+
     <div id="form-container">
         <h2>Model Parameters</h2>
         <form id="rectangle-form">
@@ -42,7 +44,7 @@
             <div class="form-group">
                 <label for="rotation">Rotation (degrees):</label>
                 <input type="number" id="rotation" step="0.1">
-            </div>           
+            </div>
 
             <div class="form-group">
                 <label for="latlon-spacing">Lat/Lon Spacing (km):</label>
@@ -71,7 +73,7 @@
                     <option value="2.07">2.07</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label for="topo-type">Topo Type:</label>
                 <select id="topo-type">
@@ -81,20 +83,21 @@
                     <option value="TRUE">TRUE</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label for="output-dir">Output Directory:</label>
                 <input type="text" id="output-dir" value="/tmp">
             </div>
-            
+
             <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
         </form>
-        
+
         <button class="download-btn" id="downloadBtn">Download configuration file</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Load custom JavaScript -->
-    <script src="js/nzcvm2_config_map.js"></script>
+    <script src="js/nzcvm_config_map.js"></script>
 </body>
+
 </html>
