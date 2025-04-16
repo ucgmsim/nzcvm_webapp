@@ -58,16 +58,22 @@ let rectangleCenter = null;
 // Function to handle file upload for location data
 function handleLocationFileUpload(event) {
     const file = event.target.files[0];
-    if (!file) return;
 
-    // Clear existing markers
-    clearLocationMarkers();
+    // If no file is selected (e.g., user cancels the dialog)
+    if (!file) {
+        event.target.value = ''; // Clear the input value if user cancels
+        // Do not clear markers if no file was selected or cancellation occurred
+        return;
+    }
+
+    // A file was selected, clear previous markers
+    clearLocationMarkers(false);
 
     const reader = new FileReader();
     reader.onload = function (e) {
         const contents = e.target.result;
         const locations = parseLocationFile(contents);
-        displayLocationMarkers(locations);
+        displayLocationMarkers(locations); // Display new markers
     };
     reader.readAsText(file);
 }
@@ -107,9 +113,6 @@ function parseLocationFile(fileContent) {
 
 // Function to display location markers on the map with optimizations for large datasets
 function displayLocationMarkers(locations) {
-    // Clear existing markers if any
-    clearLocationMarkers();
-
     // Don't proceed if no locations
     if (locations.length === 0) return;
 
@@ -170,17 +173,20 @@ function displayLocationMarkers(locations) {
 }
 
 // Function to clear all location markers
-function clearLocationMarkers() {
+function clearLocationMarkers(resetInput = true) { // Parameter controls if file input value is cleared
     if (locationMarkersLayer) {
         map.removeLayer(locationMarkersLayer);
         locationMarkersLayer = null;
     }
     locationMarkers = [];
 
-    // Reset the file input element so the user can re-upload the same file
-    const fileInput = document.getElementById('location-file-input');
-    if (fileInput) {
-        fileInput.value = '';
+    // Reset the file input element value only if resetInput is true
+    if (resetInput) {
+        const fileInput = document.getElementById('location-file-input');
+        if (fileInput) {
+            fileInput.value = ''; // Clear the selected file in the input
+        }
+        // No need to reset any span text content
     }
 }
 
@@ -189,9 +195,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const locationControls = createLocationUploadControls();
     document.getElementById('map-container').appendChild(locationControls);
 
-    // Set up the event listeners
+    // Set up the event listener for file input
     document.getElementById('location-file-input').addEventListener('change', handleLocationFileUpload);
-    document.getElementById('clear-locations-btn').addEventListener('click', clearLocationMarkers);
 });
 
 // Create UI controls for location upload
@@ -207,12 +212,15 @@ function createLocationUploadControls() {
     controlPanel.style.borderRadius = '4px';
     controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
 
+    // Revert to standard file input, remove custom label, span, and clear button
     controlPanel.innerHTML = `
         <div style="margin-bottom: 8px; font-weight: bold;">Upload and display locations</div>
         <div style="margin-bottom: 8px;">File line format: lon, lat, label</div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-            <input type="file" id="location-file-input" style="width: 100%;" />
-            <button id="clear-locations-btn" style="padding: 5px;">Clear Locations</button>
+            <!-- Standard file input -->
+            <input type="file" id="location-file-input" accept=".txt,.csv,.ll" /> 
+            
+            <!-- Removed custom label, span, and clear button -->
         </div>
     `;
 
