@@ -7,8 +7,7 @@ FROM python:3.12-alpine
 RUN apk add --no-cache git nginx
 
 # Clone the repository
-#RUN git clone https://github.com/ucgmsim/nzcvm_config.git /nzcvm_config
-RUN git clone -b dev https://github.com/ucgmsim/nzcvm_config.git /nzcvm_config
+RUN git clone https://github.com/ucgmsim/nzcvm_config.git /nzcvm_config
 
 # Changes the ownership of the `/nzcvm_config` directory (and its contents) 
 # recursively to the user and group “nobody” for improved security.
@@ -26,4 +25,4 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 # Sets the default command to run when the container starts; it executes the `start.sh` script, 
 # which starts nginx in the foreground.
-CMD /start.sh  
+CMD /start.sh
