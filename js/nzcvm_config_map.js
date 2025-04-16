@@ -6,6 +6,10 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
+// Variables for location markers from uploaded files
+let locationMarkers = [];
+let locationMarkersLayer = null;
+
 // Define initial parameters for the rectangle
 const initialOriginLat = -41.2865;
 const initialOriginLng = 174.7762;
@@ -50,6 +54,163 @@ let isRotating = false;
 let lastPos = null;
 let rotationAngle = 0;
 let rectangleCenter = null;
+
+// Function to handle file upload for location data
+function handleLocationFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Clear existing markers
+    clearLocationMarkers();
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const contents = e.target.result;
+        const locations = parseLocationFile(contents);
+        displayLocationMarkers(locations);
+    };
+    reader.readAsText(file);
+}
+
+// Function to parse the location file content
+function parseLocationFile(fileContent) {
+    const lines = fileContent.trim().split('\n');
+    const locations = [];
+    
+    for (const line of lines) {
+        // Skip empty lines or comments
+        if (!line.trim() || line.trim().startsWith('#')) continue;
+        
+        // Split by any whitespace (spaces, tabs)
+        const parts = line.trim().split(/\s+/);
+        
+        // We need at least 3 parts: longitude, latitude, label
+        if (parts.length >= 3) {
+            const lng = parseFloat(parts[0]);
+            const lat = parseFloat(parts[1]);
+            const label = parts[2];
+            
+            // Basic validation
+            if (!isNaN(lng) && !isNaN(lat)) {
+                locations.push({
+                    lng: lng,
+                    lat: lat,
+                    label: label
+                });
+            }
+        }
+    }
+    
+    console.log(`Parsed ${locations.length} locations from file`);
+    return locations;
+}
+
+// Function to display location markers on the map with optimizations for large datasets
+function displayLocationMarkers(locations) {
+    // Clear existing markers if any
+    clearLocationMarkers();
+    
+    // Don't proceed if no locations
+    if (locations.length === 0) return;
+    
+    // Create a standard layer group instead of marker cluster
+    locationMarkersLayer = L.layerGroup().addTo(map);
+    
+    // Use a batch processing approach for large datasets
+    const batchSize = 200;
+    const totalBatches = Math.ceil(locations.length / batchSize);
+    let currentBatch = 0;
+    
+    function processBatch() {
+        const start = currentBatch * batchSize;
+        const end = Math.min(start + batchSize, locations.length);
+        const batch = locations.slice(start, end);
+        
+        // Process this batch of locations
+        for (const loc of batch) {
+            // Use circleMarker instead of marker for better performance with large datasets
+            const marker = L.circleMarker([loc.lat, loc.lng], {
+                radius: 4,
+                fillColor: '#3388ff',
+                color: '#fff',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8,
+                title: loc.label
+            });
+            
+            // Add a popup with the label
+            marker.bindPopup(loc.label);
+            
+            // Store reference to the original data
+            marker.locationData = loc;
+            
+            // Add marker to the collection and track it
+            locationMarkersLayer.addLayer(marker);
+            locationMarkers.push(marker);
+        }
+        
+        // Process next batch or finish
+        currentBatch++;
+        if (currentBatch < totalBatches) {
+            // Use setTimeout to avoid blocking the UI thread
+            setTimeout(processBatch, 1);
+        } else {
+            // If there are markers, fit the map to show them
+            if (locations.length > 0) {
+                // Create bounds that include both markers and rectangle
+                const group = new L.featureGroup([locationMarkersLayer, rectangle]);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+    }
+    
+    // Start batch processing
+    processBatch();
+}
+
+// Function to clear all location markers
+function clearLocationMarkers() {
+    if (locationMarkersLayer) {
+        map.removeLayer(locationMarkersLayer);
+        locationMarkersLayer = null;
+    }
+    locationMarkers = [];
+}
+
+// Add event listener for file upload UI elements when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const locationControls = createLocationUploadControls();
+    document.getElementById('map-container').appendChild(locationControls);
+    
+    // Set up the event listeners
+    document.getElementById('location-file-input').addEventListener('change', handleLocationFileUpload);
+    document.getElementById('clear-locations-btn').addEventListener('click', clearLocationMarkers);
+});
+
+// Create UI controls for location upload
+function createLocationUploadControls() {
+    const controlPanel = document.createElement('div');
+    controlPanel.className = 'location-upload-panel';
+    controlPanel.style.position = 'absolute';
+    controlPanel.style.top = '10px';
+    controlPanel.style.right = '10px';
+    controlPanel.style.zIndex = '1000';
+    controlPanel.style.backgroundColor = 'white';
+    controlPanel.style.padding = '10px';
+    controlPanel.style.borderRadius = '4px';
+    controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    
+    controlPanel.innerHTML = `
+        <div style="margin-bottom: 8px; font-weight: bold;">Location Data</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <input type="file" id="location-file-input" style="width: 100%;" />
+            <button id="clear-locations-btn" style="padding: 5px;">Clear Locations</button>
+        </div>
+    `;
+    
+    return controlPanel;
+}
 
 // Function to add a legend to the map
 function addLegend() {
