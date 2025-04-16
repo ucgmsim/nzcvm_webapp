@@ -208,7 +208,8 @@ function createLocationUploadControls() {
     controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
 
     controlPanel.innerHTML = `
-        <div style="margin-bottom: 8px; font-weight: bold;">Display station locations</div>
+        <div style="margin-bottom: 8px; font-weight: bold;">Upload and display locations</div>
+        <div style="margin-bottom: 8px;">File line format: lon, lat, label</div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
             <input type="file" id="location-file-input" style="width: 100%;" />
             <button id="clear-locations-btn" style="padding: 5px;">Clear Locations</button>
