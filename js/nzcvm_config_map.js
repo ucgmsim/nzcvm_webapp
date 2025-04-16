@@ -72,39 +72,37 @@ function handleLocationFileUpload(event) {
     const reader = new FileReader();
     reader.onload = function (e) {
         const contents = e.target.result;
-        const locations = parseLocationFile(contents);
+        const locations = parseLocationFile(file.name.endsWith('.ll'), contents);
         displayLocationMarkers(locations); // Display new markers
     };
     reader.readAsText(file);
 }
 
 // Function to parse the location file content
-function parseLocationFile(fileContent) {
-    const lines = fileContent.trim().split('\n');
-    const locations = [];
-
-    for (const line of lines) {
-        // Skip empty lines or comments
-        if (!line.trim() || line.trim().startsWith('#')) continue;
-
-        // Split by any whitespace (spaces, tabs)
-        const parts = line.trim().split(/\s+/);
-
-        // Extract longitude, latitude, and label
-        if (parts.length >= 3) {
-            const lng = parseFloat(parts[0]);
-            const lat = parseFloat(parts[1]);
-            const label = parts[2];
-
-            // Basic validation
-            if (!isNaN(lng) && !isNaN(lat)) {
-                locations.push({
-                    lng: lng,
-                    lat: lat,
-                    label: label
-                });
-            }
-        }
+function parseLocationFile(isLLFile, fileContent) {
+    const fileHasHeaders = isLLFile ? false : document.getElementById('file-has-headers').checked;
+    if (isLLFile) {
+        fileContent = fileContent.split('\n').map(line => {
+            const parts = line.trim().split(/\s+/);
+            return parts.join(',');
+        }).join('\n');
+    }
+    const locations_results = Papa.parse(fileContent, {
+        header: fileHasHeaders,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+    });
+    if (locations_results.errors.length > 0) {
+        console.error('Error parsing file:', locations_results.errors);
+        alert('Error parsing file. Please check the format.');
+        return [];
+    }
+    var locations = locations_results.data;
+    if (!fileHasHeaders) {
+        // Remove the first row if it contains headers
+        locations = locations.map(element => {
+            return { "lng": element[0], "lat": element[1], "name": element[2] };
+        });
     }
 
     console.log(`Parsed ${locations.length} locations from file`);
@@ -114,62 +112,37 @@ function parseLocationFile(fileContent) {
 // Function to display location markers on the map with optimizations for large datasets
 function displayLocationMarkers(locations) {
     // Don't proceed if no locations
+    console.log(locations)
     if (locations.length === 0) return;
 
     // Create a standard layer group instead of marker cluster
     locationMarkersLayer = L.layerGroup().addTo(map);
 
-    // Use a batch processing approach for large datasets
-    const batchSize = 200;
-    const totalBatches = Math.ceil(locations.length / batchSize);
-    let currentBatch = 0;
+    for (const loc of locations) {
+        // Use circleMarker instead of marker for better performance with large datasets
+        const marker = L.circleMarker([loc.lat, loc.lng], {
+            radius: 4,
+            fillColor: '#3388ff',
+            color: '#fff',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8,
+            title: loc.label
+        });
 
-    function processBatch() {
-        const start = currentBatch * batchSize;
-        const end = Math.min(start + batchSize, locations.length);
-        const batch = locations.slice(start, end);
+        // Add a popup with the name
+        marker.bindPopup(loc.label);
 
-        // Process this batch of locations
-        for (const loc of batch) {
-            // Use circleMarker instead of marker for better performance with large datasets
-            const marker = L.circleMarker([loc.lat, loc.lng], {
-                radius: 4,
-                fillColor: '#3388ff',
-                color: '#fff',
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8,
-                title: loc.label
-            });
+        // Store reference to the original data
+        marker.locationData = loc;
 
-            // Add a popup with the label
-            marker.bindPopup(loc.label);
-
-            // Store reference to the original data
-            marker.locationData = loc;
-
-            // Add marker to the collection and track it
-            locationMarkersLayer.addLayer(marker);
-            locationMarkers.push(marker);
-        }
-
-        // Process next batch or finish
-        currentBatch++;
-        if (currentBatch < totalBatches) {
-            // Use setTimeout to avoid blocking the UI thread
-            setTimeout(processBatch, 1);
-        } else {
-            // If there are markers, fit the map to show them
-            if (locations.length > 0) {
-                // Create bounds that include both markers and rectangle
-                const group = new L.featureGroup([locationMarkersLayer, rectangle]);
-                map.fitBounds(group.getBounds(), { padding: [50, 50] });
-            }
-        }
+        // Add marker to the collection and track it
+        locationMarkersLayer.addLayer(marker);
+        locationMarkers.push(marker);
     }
-
-    // Start batch processing
-    processBatch();
+    // Create bounds that include both markers and rectangle
+    const group = new L.featureGroup([locationMarkersLayer, rectangle]);
+    console.log(group);
 }
 
 // Function to clear all location markers
@@ -212,15 +185,16 @@ function createLocationUploadControls() {
     controlPanel.style.borderRadius = '4px';
     controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
 
-    // Revert to standard file input, remove custom label, span, and clear button
     controlPanel.innerHTML = `
         <div style="margin-bottom: 8px; font-weight: bold;">Upload and display locations</div>
-        <div style="margin-bottom: 8px;">File line format: lon, lat, label</div>
+        <div style="margin-bottom: 8px;">Accepted formats: .csv or .ll</div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
             <!-- Standard file input -->
-            <input type="file" id="location-file-input" accept=".txt,.csv,.ll" /> 
-            
-            <!-- Removed custom label, span, and clear button -->
+            <input type="file" id="location-file-input" accept=".csv,.ll" />
+            <div style="display: flex; align-items: center;">
+                <label for="file-has-headers">File has headers (lng, lat, name):</label>
+                <input type="checkbox" id="file-has-headers" checked>
+            </div>
         </div>
     `;
 
