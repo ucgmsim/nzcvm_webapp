@@ -64,7 +64,7 @@ function handleLocationFileUpload(event) {
     clearLocationMarkers();
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const contents = e.target.result;
         const locations = parseLocationFile(contents);
         displayLocationMarkers(locations);
@@ -76,20 +76,20 @@ function handleLocationFileUpload(event) {
 function parseLocationFile(fileContent) {
     const lines = fileContent.trim().split('\n');
     const locations = [];
-    
+
     for (const line of lines) {
         // Skip empty lines or comments
         if (!line.trim() || line.trim().startsWith('#')) continue;
-        
+
         // Split by any whitespace (spaces, tabs)
         const parts = line.trim().split(/\s+/);
-        
+
         // We need at least 3 parts: longitude, latitude, label
         if (parts.length >= 3) {
             const lng = parseFloat(parts[0]);
             const lat = parseFloat(parts[1]);
             const label = parts[2];
-            
+
             // Basic validation
             if (!isNaN(lng) && !isNaN(lat)) {
                 locations.push({
@@ -100,7 +100,7 @@ function parseLocationFile(fileContent) {
             }
         }
     }
-    
+
     console.log(`Parsed ${locations.length} locations from file`);
     return locations;
 }
@@ -109,23 +109,23 @@ function parseLocationFile(fileContent) {
 function displayLocationMarkers(locations) {
     // Clear existing markers if any
     clearLocationMarkers();
-    
+
     // Don't proceed if no locations
     if (locations.length === 0) return;
-    
+
     // Create a standard layer group instead of marker cluster
     locationMarkersLayer = L.layerGroup().addTo(map);
-    
+
     // Use a batch processing approach for large datasets
     const batchSize = 200;
     const totalBatches = Math.ceil(locations.length / batchSize);
     let currentBatch = 0;
-    
+
     function processBatch() {
         const start = currentBatch * batchSize;
         const end = Math.min(start + batchSize, locations.length);
         const batch = locations.slice(start, end);
-        
+
         // Process this batch of locations
         for (const loc of batch) {
             // Use circleMarker instead of marker for better performance with large datasets
@@ -138,18 +138,18 @@ function displayLocationMarkers(locations) {
                 fillOpacity: 0.8,
                 title: loc.label
             });
-            
+
             // Add a popup with the label
             marker.bindPopup(loc.label);
-            
+
             // Store reference to the original data
             marker.locationData = loc;
-            
+
             // Add marker to the collection and track it
             locationMarkersLayer.addLayer(marker);
             locationMarkers.push(marker);
         }
-        
+
         // Process next batch or finish
         currentBatch++;
         if (currentBatch < totalBatches) {
@@ -164,7 +164,7 @@ function displayLocationMarkers(locations) {
             }
         }
     }
-    
+
     // Start batch processing
     processBatch();
 }
@@ -176,13 +176,19 @@ function clearLocationMarkers() {
         locationMarkersLayer = null;
     }
     locationMarkers = [];
+
+    // Reset the file input element so the user can re-upload the same file
+    const fileInput = document.getElementById('location-file-input');
+    if (fileInput) {
+        fileInput.value = '';
+    }
 }
 
 // Add event listener for file upload UI elements when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const locationControls = createLocationUploadControls();
     document.getElementById('map-container').appendChild(locationControls);
-    
+
     // Set up the event listeners
     document.getElementById('location-file-input').addEventListener('change', handleLocationFileUpload);
     document.getElementById('clear-locations-btn').addEventListener('click', clearLocationMarkers);
@@ -200,15 +206,15 @@ function createLocationUploadControls() {
     controlPanel.style.padding = '10px';
     controlPanel.style.borderRadius = '4px';
     controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-    
+
     controlPanel.innerHTML = `
-        <div style="margin-bottom: 8px; font-weight: bold;">Location Data</div>
+        <div style="margin-bottom: 8px; font-weight: bold;">Display station locations</div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
             <input type="file" id="location-file-input" style="width: 100%;" />
             <button id="clear-locations-btn" style="padding: 5px;">Clear Locations</button>
         </div>
     `;
-    
+
     return controlPanel;
 }
 
@@ -218,11 +224,11 @@ function addLegend() {
         map.removeControl(legend);
     }
 
-    legend = L.control({position: 'bottomright'});
-    legend.onAdd = function() {
+    legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function () {
         const div = L.DomUtil.create('div', 'legend');
         div.innerHTML = '<h4>Basin Regions</h4>' +
-                       '<i style="background:#ba0045"></i> Basin Areas<br>';
+            '<i style="background:#ba0045"></i> Basin Areas<br>';
         return div;
     };
     legend.addTo(map);
@@ -287,14 +293,14 @@ function loadGeoJSONByModelVersion(modelVersion) {
         .then(data => {
             // Use performance optimized approach for GeoJSON rendering
             currentGeoJSONLayer = L.geoJSON(data, {
-                style: function() {
+                style: function () {
                     return {
                         color: "#ba0045",
                         weight: 1,
                         fillOpacity: 0.3
                     };
                 },
-                onEachFeature: function(feature, layer) {
+                onEachFeature: function (feature, layer) {
                     if (feature.properties && feature.properties.source_file) {
                         layer.bindTooltip(feature.properties.source_file);
                     }
@@ -339,7 +345,7 @@ function loadGeoJSONByModelVersion(modelVersion) {
             document.getElementById('map-container').appendChild(detailedAlert);
 
             // Add event listener to close button
-            document.getElementById('close-error').addEventListener('click', function() {
+            document.getElementById('close-error').addEventListener('click', function () {
                 document.getElementById('error-message').remove();
             });
 
@@ -352,12 +358,12 @@ function loadGeoJSONByModelVersion(modelVersion) {
 }
 
 // Add change event listener for model version selection
-document.getElementById('model-version').addEventListener('change', function() {
+document.getElementById('model-version').addEventListener('change', function () {
     loadGeoJSONByModelVersion(this.value);
 });
 
 // Load initial GeoJSON based on default selected model version
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const initialModelVersion = document.getElementById('model-version').value;
     loadGeoJSONByModelVersion(initialModelVersion);
 });
@@ -450,7 +456,7 @@ function updateRotationHandlePosition() {
     }).addTo(map);
 
     // Add click handler to rotation handle
-    rotationHandle.on('mousedown', function(e) {
+    rotationHandle.on('mousedown', function (e) {
         isRotating = true;
         lastPos = e.latlng;
         map.dragging.disable(); // Disable map dragging while rotating
@@ -558,7 +564,7 @@ function updateFormValues() {
 updateFormValues();
 
 // Handle form submission to update rectangle
-document.getElementById('apply-btn').addEventListener('click', function() {
+document.getElementById('apply-btn').addEventListener('click', function () {
     const originLat = parseFloat(document.getElementById('origin-lat').value);
     const originLng = parseFloat(document.getElementById('origin-lng').value);
     const extentX = parseFloat(document.getElementById('extent-x').value);
@@ -646,7 +652,7 @@ function updateResizeHandlePosition() {
     }).addTo(map);
 
     // Add mousedown handler to resize handle
-    resizeHandle.on('mousedown', function(e) {
+    resizeHandle.on('mousedown', function (e) {
         isResizing = true;
         lastPos = e.latlng;
         map.dragging.disable(); // Disable map dragging while resizing
@@ -663,7 +669,7 @@ function updateResizeHandlePosition() {
 }
 
 // Make rectangle interactive
-rectangle.on('mousedown', function(e) {
+rectangle.on('mousedown', function (e) {
     const bounds = rectangle.getBounds();
 
     // Store rectangle center for calculations
@@ -678,7 +684,7 @@ rectangle.on('mousedown', function(e) {
 });
 
 // Handle mouse movement
-document.addEventListener('mousemove', function(e) {
+document.addEventListener('mousemove', function (e) {
     if (!isDragging && !isResizing && !isRotating) return;
 
     // Convert screen position to map coordinates
@@ -774,7 +780,7 @@ document.addEventListener('mousemove', function(e) {
 });
 
 // End interaction on mouseup
-document.addEventListener('mouseup', function() {
+document.addEventListener('mouseup', function () {
     if (!(isDragging || isResizing || isRotating)) return;
 
     // End interaction
@@ -791,14 +797,14 @@ document.addEventListener('mouseup', function() {
 });
 
 // Reset cursor when mouse leaves the rectangle
-rectangle.on('mouseout', function() {
+rectangle.on('mouseout', function () {
     rectangle._path.style.cursor = '';
 });
 
 // Initialize rotation and resize handles
-map.on('layeradd', function(e) {
+map.on('layeradd', function (e) {
     if (e.layer === rectangle) {
-        setTimeout(function() {
+        setTimeout(function () {
             applyRotation();
             createRotationHandle();
             createResizeHandle();
@@ -807,7 +813,7 @@ map.on('layeradd', function(e) {
 });
 
 // Update handles when map changes
-map.on('zoomend moveend dragend zoom move viewreset', function() {
+map.on('zoomend moveend dragend zoom move viewreset', function () {
     if (rectangle) {
         // Ensure rectangle rotation is properly maintained after any map change
         applyRotation();
@@ -815,8 +821,8 @@ map.on('zoomend moveend dragend zoom move viewreset', function() {
 });
 
 // Add event handler for when the map is redrawn
-map.on('redraw', function() {
-    setTimeout(function() {
+map.on('redraw', function () {
+    setTimeout(function () {
         if (rectangle) {
             applyRotation();
         }
@@ -824,7 +830,7 @@ map.on('redraw', function() {
 });
 
 // Initialize rotation and resize handles
-setTimeout(function() {
+setTimeout(function () {
     applyRotation();
 }, 500);
 
