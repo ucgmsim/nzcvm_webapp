@@ -124,11 +124,11 @@ function displayLocationMarkers(locations) {
             weight: 1,
             opacity: 1,
             fillOpacity: 0.8,
-            title: loc.label
+            title: loc.name
         });
 
         // Add a popup with the name
-        marker.bindPopup(loc.label);
+        marker.bindPopup(loc.name);
 
         // Store reference to the original data
         marker.locationData = loc;
