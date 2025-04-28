@@ -80,7 +80,7 @@ function handleLocationFileUpload(event) {
 
 // Function to parse the location file content
 function parseLocationFile(isLLFile, fileContent) {
-    const fileHasHeaders = isLLFile ? false : document.getElementById('file-has-headers').checked;
+    const fileHasHeaders = !isLLFile && document.getElementById('file-has-headers').checked;
     if (isLLFile) {
         fileContent = fileContent.split('\n').map(line => {
             const parts = line.trim().split(/\s+/);
