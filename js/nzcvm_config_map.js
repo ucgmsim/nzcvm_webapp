@@ -82,10 +82,7 @@ function handleLocationFileUpload(event) {
 function parseLocationFile(isLLFile, fileContent) {
     const fileHasHeaders = !isLLFile && document.getElementById('file-has-headers').checked;
     if (isLLFile) {
-        fileContent = fileContent.split('\n').map(line => {
-            const parts = line.trim().split(/\s+/);
-            return parts.join(',');
-        }).join('\n');
+        fileContent = fileContent.split('\n').map(line => line.trim().replace(/s+/, ',')).join('\n');
     }
     const locations_results = Papa.parse(fileContent, {
         header: fileHasHeaders,
