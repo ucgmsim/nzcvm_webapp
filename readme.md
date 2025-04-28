@@ -49,7 +49,7 @@ needed to run the NZCVM code.
 
 ### Logging in to Docker Hub
 Open a terminal and enter the following command:
-`sudo docker login`
+`docker login` (use `sudo` if you are running docker as root).
 
 The terminal will show a message like the following:
 
