@@ -171,15 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // Create UI controls for location upload
 function createLocationUploadControls() {
     const controlPanel = document.createElement('div');
-    controlPanel.className = 'location-upload-panel';
-    controlPanel.style.position = 'absolute';
-    controlPanel.style.top = '10px';
-    controlPanel.style.right = '10px';
-    controlPanel.style.zIndex = '1000';
-    controlPanel.style.backgroundColor = 'white';
-    controlPanel.style.padding = '10px';
-    controlPanel.style.borderRadius = '4px';
-    controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    controlPanel.id = 'location-upload-panel';
 
     controlPanel.innerHTML = `
         <div style="margin-bottom: 8px; font-weight: bold;">Upload and display locations</div>
