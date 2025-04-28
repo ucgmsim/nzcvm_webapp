@@ -12,8 +12,7 @@ needed to run the NZCVM code.
     * Allow your user to "linger" to run services at start up
         * `sudo loginctl enable-linger $(whoami)`
     * Add the following lines to your `~/.bashrc` file.
-        * `export PATH=/usr/bin:$PATH`
-        * `export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock`
+        * `export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock` (if **not** running as root).
 
 
 * In a terminal, change to the `docker` folder in the repository
