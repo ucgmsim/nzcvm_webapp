@@ -23,7 +23,7 @@ needed to run the NZCVM code.
         * `docker build -t earthquakesuc/nzcvm_config .` (add `sudo` if running as root) 
     * If this is not the first time building the image, and the `nzcvm_config` package has changed, run with `--no-cache` 
       so the image will be built with the latest version of the `nzcvm_config` website source:
-        * `docker build --no-cache -t earthquakesuc/nzcvm_config .` (add `sudo` if running as root) 
+        * `docker build -t earthquakesuc/nzcvm_config .` (add `sudo` if running as root) 
 
     * Push the image to Docker Hub (see the section below on logging in to Docker Hub)
         * `docker push earthquakesuc/nzcvm_config` (add `sudo` if running as root) 
