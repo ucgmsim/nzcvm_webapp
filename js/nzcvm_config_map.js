@@ -139,8 +139,6 @@ function displayLocationMarkers(locations) {
         locationMarkersLayer.addLayer(marker);
         locationMarkers.push(marker);
     }
-    // Create bounds that include both markers and rectangle
-    const group = new L.featureGroup([locationMarkersLayer, rectangle]);
 }
 
 // Function to clear all location markers
