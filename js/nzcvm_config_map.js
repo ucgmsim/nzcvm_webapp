@@ -82,12 +82,14 @@ function handleLocationFileUpload(event) {
 function parseLocationFile(isLLFile, fileContent) {
     const fileHasHeaders = !isLLFile && document.getElementById('file-has-headers').checked;
     if (isLLFile) {
-        fileContent = fileContent.split('\n').map(line => line.trim().replace(/s+/, ',')).join('\n');
+        // Replace all occurrences of one or more whitespace characters with a single comma
+        fileContent = fileContent.split('\n').map(line => line.trim().replace(/\s+/g, ',')).join('\n');
     }
     const locations_results = Papa.parse(fileContent, {
         header: fileHasHeaders,
         dynamicTyping: true,
         skipEmptyLines: true,
+        transformHeader: header => header.trim() // Add this line to trim header whitespace
     });
     if (locations_results.errors.length > 0) {
         console.error('Error parsing file:', locations_results.errors);
@@ -180,7 +182,7 @@ function createLocationUploadControls() {
             <!-- Standard file input -->
             <input type="file" id="location-file-input" accept=".csv,.ll" />
             <div style="display: flex; align-items: center;">
-                <label for="file-has-headers">File has headers (lng, lat, name):</label>
+                <label for="file-has-headers">.csv file has headers (lng, lat, name):</label>
                 <input type="checkbox" id="file-has-headers" checked>
             </div>
         </div>
