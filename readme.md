@@ -38,6 +38,8 @@ needed to run the NZCVM code.
             * `sudo systemctl start nzcvm_config.service`
         * If the service is already running, restart it.
             * `sudo systemctl restart nzcvm_config.service`
+        * To enable the service on restart,
+            * `sudo systemctl enable nzcvm_config.service`
 
     * Check the status of the service to ensure it is running
         * `sudo systemctl status nzcvm_config.service` 
