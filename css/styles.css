@@ -161,7 +161,7 @@ h2 {
 }
 
 .resize-icon:before {
-    content: "↗";
+    content: "⤡";
     position: absolute;
     top: -1px;
     left: 2px;
