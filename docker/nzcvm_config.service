@@ -7,7 +7,7 @@ Description=NZCVM Config Service
 # Starts the [Service] section, which controls how the service process executes and behaves.
 [Service]
 
-# Run the service as the nzcvm_config user where 1009 is the ID for the nzcvm_config user
+# Run the service as the nzcvm_config user where 1009 is the User ID (UID) for the nzcvm_config user (given by `id -u` )
 User=nzcvm_config
 Environment="DOCKER_HOST=unix:///run/user/1009/docker.sock"
 
