@@ -30,7 +30,7 @@ These steps can be carried out on any machine that has Docker (i.e., they do not
 This guide uses **Rootless Docker**, meaning that the Docker installation is for a specific user that does not require `sudo`. If you need to install Rootless Docker on your system, follow [this guide](https://docs.docker.com/engine/security/rootless/).
 
 * Create a user called `nzcvm_config` to run the systemd service
-    *  `sudo useradd -m -s /bin/bash username` where `-m` creates a home directory and `-s /bin/bash` sets the default shell to bash.
+    *  `sudo useradd -m -s /bin/bash nzcvm_config` where `-m` creates a home directory and `-s /bin/bash` sets the default shell to bash.
 
 * Temporarily give the `nzcvm_config` user `sudo` privileges to make the next few steps simpler (`sudo` privileges will be revoked later)
     *  `sudo usermod -aG sudo nzcvm_config`
