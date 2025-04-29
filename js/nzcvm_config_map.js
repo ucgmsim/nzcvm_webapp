@@ -805,7 +805,27 @@ setTimeout(function () {
     applyRotation();
 }, 500);
 
-// Function to download corner coordinates
+// Function to collect all configuration data from the form
+function getConfigurationData() {
+    return {
+        'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed for generation
+        'MODEL_VERSION': document.getElementById('model-version').value,
+        'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value).toFixed(6),
+        'ORIGIN_LON': parseFloat(document.getElementById('origin-lng').value).toFixed(6),
+        'ORIGIN_ROT': parseFloat(document.getElementById('rotation').value).toFixed(1),
+        'EXTENT_X': parseFloat(document.getElementById('extent-x').value).toFixed(3),
+        'EXTENT_Y': parseFloat(document.getElementById('extent-y').value).toFixed(3),
+        'EXTENT_ZMAX': parseFloat(document.getElementById('extent-zmax').value).toFixed(1),
+        'EXTENT_ZMIN': parseFloat(document.getElementById('extent-zmin').value).toFixed(1),
+        'EXTENT_Z_SPACING': parseFloat(document.getElementById('z-spacing').value).toFixed(1),
+        'EXTENT_LATLON_SPACING': parseFloat(document.getElementById('latlon-spacing').value).toFixed(1),
+        'MIN_VS': parseFloat(document.getElementById('min-vs').value).toFixed(1),
+        'TOPO_TYPE': document.getElementById('topo-type').value,
+        'OUTPUT_DIR': document.getElementById('output-dir').value || '/tmp/nzcvm_output' // Ensure a default if empty
+    };
+}
+
+// Function to download corner coordinates as a config file
 function downloadConfigFile() {
     // Get form values for configuration file
     const originLat = parseFloat(document.getElementById('origin-lat').value);
@@ -854,5 +874,91 @@ function downloadConfigFile() {
     URL.revokeObjectURL(url);
 }
 
-// Add click event to download button
+// Function to trigger the backend model generation and download results
+async function generateModelAndDownload() {
+    const generateBtn = document.getElementById('generateBtn');
+    const statusMessage = document.getElementById('status-message');
+
+    // Disable button and show status
+    generateBtn.disabled = true;
+    statusMessage.textContent = 'Generating model files... Please wait.';
+    statusMessage.style.color = 'orange';
+
+    const configData = getConfigurationData();
+
+    try {
+        // Send config data to the backend via Nginx proxy (relative URL)
+        const response = await fetch('/run-nzcvm', { // Use relative path
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(configData),
+        });
+
+        if (!response.ok) {
+            // Try to get error message from backend response body
+            let errorMsg = `HTTP error ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.error) {
+                    errorMsg = `Error: ${errorData.error}`;
+                }
+            } catch (e) {
+                // Ignore if response is not JSON
+                console.warn("Could not parse error response as JSON.");
+            }
+            throw new Error(errorMsg);
+        }
+
+        // Get the filename from Content-Disposition header if available
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'nzcvm_output.zip'; // Default filename
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+
+        // Get the response body as a blob (zip file)
+        const blob = await response.blob();
+
+        // Create a link to download the blob
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename; // Use the determined filename
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        statusMessage.textContent = 'Model files generated and download started successfully!';
+        statusMessage.style.color = 'green';
+
+
+    } catch (error) {
+        console.error('Error generating model:', error);
+        statusMessage.textContent = `Failed to generate model: ${error.message}`;
+        statusMessage.style.color = 'red';
+    } finally {
+        // Re-enable button
+        generateBtn.disabled = false;
+        // Optionally clear the status message after a delay
+        setTimeout(() => {
+            if (statusMessage.textContent.startsWith('Failed') || statusMessage.textContent.startsWith('Model files generated')) {
+                statusMessage.textContent = '';
+            }
+        }, 10000); // Clear after 10 seconds
+    }
+}
+
+
+// Add click event to download config button
 document.getElementById('downloadBtn').addEventListener('click', downloadConfigFile);
+
+// Add click event to generate model button
+document.getElementById('generateBtn').addEventListener('click', generateModelAndDownload);

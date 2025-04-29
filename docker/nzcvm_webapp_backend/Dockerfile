@@ -1,0 +1,42 @@
+# Use an official Python runtime as a parent image
+FROM python:3.12-alpine
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container at /app
+# The source path is relative to the build context defined in docker-compose.yml
+COPY docker/nzcvm_webapp_backend/requirements.txt /app/
+
+RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
+# Explicitly set the path to the llvm-config executable for the llvmlite build process.
+# The llvmlite installation script searches for an executable named 'llvm-config' by default.
+# However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
+# Setting this environment variable tells the build script the correct path, preventing a "not found" error.
+ENV LLVM_CONFIG=/usr/bin/llvm-config-15
+RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling@main#egg=velocity_modelling
+
+# Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the Flask application file into the container at /app
+# Ensure app.py is in the same directory as this Dockerfile during build context,
+# or adjust the source path accordingly relative to the build context.
+# Assuming build context is /home/arr65/src/nzcvm_config, the source path is correct.
+COPY app.py /app/
+
+# Make port 5000 available to the world outside this container (Gunicorn will listen here)
+# Note: This doesn't publish the port, docker-compose will do that.
+EXPOSE 5000
+
+# Define environment variable
+ENV FLASK_APP=app.py
+
+# Run app.py when the container launches using Gunicorn
+# --bind 0.0.0.0:5000: Listen on all network interfaces within the container on port 5000
+# --workers 3: Number of worker processes (adjust based on resources)
+# app:app: Look for the Flask app instance named 'app' in the 'app.py' module
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "app:app"]
+
+# Keep the container running indefinitely for debugging/exec purposes
+#CMD ["tail", "-f", "/dev/null"]
