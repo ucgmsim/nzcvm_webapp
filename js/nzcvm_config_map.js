@@ -888,7 +888,7 @@ async function generateModelAndDownload() {
 
     try {
         // Send config data to the backend via Nginx proxy (relative URL)
-        const response = await fetch('/run-nzcvm', { // Use relative path
+        const response = await fetch('/nzcvm_webapp/run-nzcvm', { // Use relative path
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
