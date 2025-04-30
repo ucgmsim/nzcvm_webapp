@@ -25,16 +25,20 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Assuming build context is /home/arr65/src/nzcvm_config, the source path is correct.
 COPY app.py /app/
 
-# Make port 5000 available to the world outside this container (Gunicorn will listen here)
-# Note: This doesn't publish the port, docker-compose will do that.
+# Expose port 5000 for inter-container communication (Gunicorn listens here).
+# This informs Docker the container uses this port; it does not publish
+# the port to the host (that's done via 'ports' in docker-compose.yml).
 EXPOSE 5000
 
 # Define environment variable
 ENV FLASK_APP=app.py
 
+
 # Run app.py when the container launches using Gunicorn
+# Gunicorn is a Python WSGI HTTP server for UNIX. It serves the Flask app in production.
 # --bind 0.0.0.0:5000: Listen on all network interfaces within the container on port 5000
-# --workers 3: Number of worker processes (adjust based on resources)
+# --workers 3: Number of worker processes. Each worker handles requests independently so 
+# using 3 workers will allow the app to generate 3 different veloctity models simultaneously.
 # app:app: Look for the Flask app instance named 'app' in the 'app.py' module
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "app:app"]
 

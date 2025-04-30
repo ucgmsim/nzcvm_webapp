@@ -2,20 +2,11 @@ import os
 import subprocess
 import tempfile
 import zipfile
-import shutil
 
 # Import jsonify and abort if not already explicitly imported at the top
 from flask import Flask, request, send_file, jsonify, abort
 
-# Import CORS
-from flask_cors import CORS
-
 app = Flask(__name__)
-# Enable CORS for all domains on all routes
-# Although Nginx acts as a proxy, enabling CORS here provides flexibility
-# and handles potential direct requests or different setups.
-# You might restrict origins in production, e.g., CORS(app, origins=["http://yourdomain.com"])
-CORS(app)
 
 # --- Configuration ---
 # Define the path to the NZCVM script within the container
@@ -49,11 +40,11 @@ def run_nzcvm_process(config_path, output_dir):
 
     print(f"Running command: {' '.join(command_args)}")
     try:
-        # Use capture_output=True to get stdout/stderr, increase timeout
-        # Consider making the timeout configurable or even longer if model generation takes time
+        # TODO Make the timeout configurable for long runs.
+        # Setting # 10 min (600 seconds) timeout for now
         result = subprocess.run(
             command_args, check=True, capture_output=True, text=True, timeout=600
-        )  # 10 min timeout
+        )
         print("NZCVM Process STDOUT:")
         print(result.stdout)
         print("NZCVM Process STDERR:")
@@ -86,10 +77,10 @@ def zip_output_files(directory_to_zip, zip_path):
         for root, dirs, files in os.walk(directory_to_zip):
             for file in files:
                 file_path = os.path.join(root, file)
-                # Arcname is the name inside the zip file
-                arcname = os.path.relpath(file_path, directory_to_zip)
-                print(f"Adding {file_path} as {arcname}")
-                zipf.write(file_path, arcname=arcname)
+                # archive_name is the name inside the zip file
+                archive_name = os.path.relpath(file_path, directory_to_zip)
+                print(f"Adding {file_path} as {archive_name}")
+                zipf.write(file_path, arcname=archive_name)
     print("Zipping complete.")
 
 
@@ -105,7 +96,6 @@ def handle_run_nzcvm():
     config_data = request.get_json()
     print("Received config data:", config_data)
 
-    # Validate required config fields (add more as needed)
     # Ensure all fields required by the nzcvm.py script are present
     required_fields = [
         "MODEL_VERSION",
@@ -125,7 +115,7 @@ def handle_run_nzcvm():
     if not all(field in config_data for field in required_fields):
         abort(400, description="Missing required configuration fields")
 
-    # Use temporary directories for isolation and cleanup
+    # Use temporary directories for isolation and easy cleanup
     with tempfile.TemporaryDirectory() as temp_dir:
         # Define output dir within the temp dir for security/cleanup
         # The script will write into this directory inside the container
@@ -157,7 +147,6 @@ def handle_run_nzcvm():
             print(
                 f"Warning: Output directory '{output_dir}' is empty after process execution."
             )
-            # Decide how to handle: error or empty zip? Sending error for now.
             return (
                 jsonify(
                     {"error": "NZCVM process completed but produced no output files."}
@@ -183,4 +172,3 @@ def handle_run_nzcvm():
             as_attachment=True,
             download_name=zip_filename,
         )
-        # temp_dir and its contents (config, output, zip) are automatically cleaned up here
