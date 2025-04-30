@@ -13,7 +13,7 @@ services:
     # location in the container. This allows the backend to access the data
     # without needing to copy it into the container image. 
     volumes:
-      - /home/arr65/src/velocity_modelling/velocity_modelling/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
+      - /mnt/mantle_data/nzcvm_webapp_data/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
     # Connect this service to the custom bridge network defined below.
     # This allows other containers on the same network (like the frontend)
     # to reach this service using its name ('nzcvm_webapp_backend') as a hostname.
