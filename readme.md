@@ -1,3 +1,7 @@
+# !!! Outdated !!!
+
+This readme is only relevant to the early version that could not run the NZCVM Python code
+
 ## Introduction
 
 This repo contains the source code for the `nzcvm_config` website, and files to create a Docker
