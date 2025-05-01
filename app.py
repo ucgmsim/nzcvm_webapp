@@ -2,9 +2,10 @@ import os
 import subprocess
 import tempfile
 import zipfile
+from typing import Dict, Tuple, Union
 
 # Import jsonify and abort if not already explicitly imported at the top
-from flask import Flask, request, send_file, jsonify, abort
+from flask import Flask, request, send_file, jsonify, abort, Response
 
 app = Flask(__name__)
 
@@ -16,8 +17,23 @@ NZCVM_SCRIPT_PATH = (
 
 
 # --- Helper Functions ---
-def create_config_file(config_data, directory):
-    """Creates a temporary config file."""
+def create_config_file(
+    config_data: Dict[str, Union[str, float, int]], directory: str
+) -> str:
+    """Creates a temporary config file from a dictionary.
+
+    Parameters
+    ----------
+    config_data : Dict[str, Union[str, float, int]]
+        Dictionary containing configuration key-value pairs.
+    directory : str
+        The directory path where the config file will be created.
+
+    Returns
+    -------
+    str
+        The full path to the generated configuration file.
+    """
     config_content = [f"{key}={value}" for key, value in config_data.items()]
     config_path = os.path.join(directory, "nzcvm.cfg")
     with open(config_path, "w") as f:
@@ -26,8 +42,24 @@ def create_config_file(config_data, directory):
     return config_path
 
 
-def run_nzcvm_process(config_path, output_dir):
-    """Runs the NZCVM command using subprocess."""
+def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
+    """Runs the NZCVM command using subprocess.
+
+    Executes the NZCVM script to generate the velocity model based on
+    the provided configuration file, directing output to the specified directory.
+
+    Parameters
+    ----------
+    config_path : str
+        Path to the NZCVM configuration file.
+    output_dir : str
+        Path to the directory where NZCVM output files should be saved.
+
+    Returns
+    -------
+    bool
+        True if the NZCVM process completed successfully, False otherwise.
+    """
     # Construct the actual command to run the NZCVM script
     command_args = [
         "python",
@@ -40,8 +72,7 @@ def run_nzcvm_process(config_path, output_dir):
 
     print(f"Running command: {' '.join(command_args)}")
     try:
-        # TODO Make the timeout configurable for long runs.
-        # Setting # 10 min (600 seconds) timeout for now
+        # Setting 10 min (600 seconds) timeout
         result = subprocess.run(
             command_args, check=True, capture_output=True, text=True, timeout=600
         )
@@ -70,8 +101,22 @@ def run_nzcvm_process(config_path, output_dir):
         return False
 
 
-def zip_output_files(directory_to_zip, zip_path):
-    """Zips the contents of the specified directory."""
+def zip_output_files(directory_to_zip: str, zip_path: str) -> None:
+    """Zips the contents of the specified directory.
+
+    Creates a zip archive containing all files within the given directory.
+
+    Parameters
+    ----------
+    directory_to_zip : str
+        The path to the directory whose contents should be zipped.
+    zip_path : str
+        The desired path for the output zip file.
+
+    Returns
+    -------
+    None
+    """
     print(f"Zipping contents of {directory_to_zip} into {zip_path}")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(directory_to_zip):
@@ -86,9 +131,18 @@ def zip_output_files(directory_to_zip, zip_path):
 
 # --- Flask Route ---
 @app.route("/run-nzcvm", methods=["POST"])
-def handle_run_nzcvm():
-    """
-    Receives configuration, runs NZCVM, zips output, and sends it back.
+def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
+    """Flask route handler for running the NZCVM process.
+
+    Receives configuration data as JSON, validates it, runs the NZCVM script
+    in a subprocess, zips the output files, and sends the zip file back
+    to the client as an attachment. Handles errors during the process.
+
+    Returns
+    -------
+    Union[Response, Tuple[Response, int]]
+        A Flask Response object containing the zip file for download,
+        or a JSON error response with an appropriate HTTP status code.
     """
     if not request.is_json:
         abort(400, description="Request must be JSON")
@@ -117,8 +171,7 @@ def handle_run_nzcvm():
 
     # Use temporary directories for isolation and easy cleanup
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Define output dir within the temp dir for security/cleanup
-        # The script will write into this directory inside the container
+        # Put the output directory inside the temp directory of the container
         output_dir = os.path.join(temp_dir, "nzcvm_output")
         os.makedirs(output_dir, exist_ok=True)  # Ensure output dir exists
 
@@ -133,8 +186,6 @@ def handle_run_nzcvm():
         success = run_nzcvm_process(config_path, output_dir)
 
         if not success:
-            # Use jsonify for error messages
-            # Consider capturing and returning more specific errors from stderr if possible
             return (
                 jsonify(
                     {"error": "NZCVM process failed. Check server logs for details."}

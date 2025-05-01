@@ -159,7 +159,7 @@ function clearLocationMarkers(resetInput = true) { // Parameter controls if file
     }
 }
 
-// Add event listener for file upload UI elements when the DOM is loaded
+// Add event listener for file upload User Interface (UI) elements when the Document Object Model (DOM) is loaded
 document.addEventListener('DOMContentLoaded', function () {
     const locationControls = createLocationUploadControls();
     document.getElementById('map-container').appendChild(locationControls);
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('location-file-input').addEventListener('change', handleLocationFileUpload);
 });
 
-// Create UI controls for location upload
+// Create User Interface (UI) controls for location upload
 function createLocationUploadControls() {
     const controlPanel = document.createElement('div');
     controlPanel.id = 'location-upload-panel';
@@ -245,7 +245,7 @@ function loadGeoJSONByModelVersion(modelVersion) {
     loadingDiv.innerText = 'Loading GeoJSON data...';
     document.getElementById('map-container').appendChild(loadingDiv);
 
-    console.log('Attempting to load GeoJSON from:', geoJsonUrl);
+    console.log('Loading GeoJSON from:', geoJsonUrl);
 
     // Fetch the GeoJSON file
     fetch(geoJsonUrl)
