@@ -11,9 +11,6 @@ services:
     # without needing to copy it into the container image. 
     volumes:
       - /mnt/mantle_data/nzcvm_webapp_data/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
-      # Optional: Add volumes for development to sync code without rebuilding
-      # volumes:
-      - ./app.py:/app/app.py
     # Connect this service to the custom bridge network defined below.
     # This allows other containers on the same network (like the frontend)
     # to reach this service using its name ('nzcvm_webapp_backend') as a hostname.
@@ -30,12 +27,6 @@ services:
       - "8888:80" # Map host port 8888 to container port 80 (Nginx)
     depends_on:
       - nzcvm_webapp_backend
-    # Optional: Add volumes for development to sync code without rebuilding
-    volumes:
-      - ./index.html:/usr/share/nginx/html/index.html
-      - ./css:/usr/share/nginx/html/css
-      - ./js:/usr/share/nginx/html/js
-      - ./data:/usr/share/nginx/html/data
 
     # Connect this service to the custom bridge network.
     # This allows Nginx in this container to proxy requests to the backend
