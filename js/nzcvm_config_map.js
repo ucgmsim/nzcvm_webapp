@@ -556,6 +556,9 @@ document.getElementById('apply-btn').addEventListener('click', function () {
 
         // Apply rotation
         applyRotation();
+
+        // Update form values, including the area, after applying changes
+        updateFormValues(); // Added this call
     }
 });
 
