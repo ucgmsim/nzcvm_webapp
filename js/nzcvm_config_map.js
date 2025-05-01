@@ -892,14 +892,8 @@ async function generateModelAndDownload() {
     // Check if area exceeds the limit
     const areaLimit = 400; // Area limit in sq km
     if (currentArea > areaLimit) {
-        statusMessage.textContent = `This website is unable to generate velocity models with domains larger than ${areaLimit} square km. Please make the domain smaller or download the configuration file and generate the model on your own computer. Current area: ${currentArea.toFixed(2)} km².`;
+        statusMessage.textContent = `This website is unable to generate velocity models with domains larger than ${areaLimit} km². Please make the domain smaller or download the configuration file and generate the model on your own computer. Current area: ${currentArea.toFixed(2)} km².`;
         statusMessage.style.color = 'red';
-        // Optionally clear the message after a delay
-        setTimeout(() => {
-            if (statusMessage.textContent.startsWith('This website is unable')) {
-                statusMessage.textContent = '';
-            }
-        }, 15000); // Clear after 15 seconds
         return; // Stop execution
     }
 
