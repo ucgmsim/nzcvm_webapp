@@ -512,7 +512,7 @@ function calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, exte
     ];
 }
 
-// Function to update form with current rectangle bounds
+// Function to update form with current rectangle bounds and calculated area
 function updateFormValues() {
     const bounds = rectangle.getBounds();
     const center = bounds.getCenter();
@@ -522,6 +522,7 @@ function updateFormValues() {
     // Calculate extents in kilometers
     const width = degreesToKm(0, bounds.getEast() - bounds.getWest(), originLat).lngKm;
     const height = degreesToKm(bounds.getNorth() - bounds.getSouth(), 0, originLat).latKm;
+    const area = width * height; // Calculate area
 
     // Update form fields
     document.getElementById('origin-lat').value = originLat.toFixed(6);
@@ -529,6 +530,7 @@ function updateFormValues() {
     document.getElementById('extent-x').value = width.toFixed(3);
     document.getElementById('extent-y').value = height.toFixed(3);
     document.getElementById('rotation').value = rotationAngle.toFixed(1);
+    document.getElementById('area').value = area.toFixed(2); // Update area display
 }
 
 // Initialize form values
@@ -879,7 +881,26 @@ async function generateModelAndDownload() {
     const generateBtn = document.getElementById('generateBtn');
     const statusMessage = document.getElementById('status-message');
 
-    // Disable button and show status
+    // Calculate area from current form values
+    const extentX = parseFloat(document.getElementById('extent-x').value);
+    const extentY = parseFloat(document.getElementById('extent-y').value);
+    const currentArea = extentX * extentY;
+
+    // Check if area exceeds the limit
+    const areaLimit = 400; // Area limit in sq km
+    if (currentArea > areaLimit) {
+        statusMessage.textContent = `This website is unable to generate velocity models with domains larger than ${areaLimit} square km. Please make the domain smaller or download the configuration file and generate the model on your own computer. Current area: ${currentArea.toFixed(2)} km².`;
+        statusMessage.style.color = 'red';
+        // Optionally clear the message after a delay
+        setTimeout(() => {
+            if (statusMessage.textContent.startsWith('This website is unable')) {
+                statusMessage.textContent = '';
+            }
+        }, 15000); // Clear after 15 seconds
+        return; // Stop execution
+    }
+
+    // Disable button and show status (only if area is within limit)
     generateBtn.disabled = true;
     statusMessage.textContent = 'Generating model files... Please wait.';
     statusMessage.style.color = 'orange';
@@ -961,4 +982,9 @@ async function generateModelAndDownload() {
 document.getElementById('downloadBtn').addEventListener('click', downloadConfigFile);
 
 // Add click event to generate model button
-document.getElementById('generateBtn').addEventListener('click', generateModelAndDownload);
+// Remove the old direct call and replace with the check logic
+// document.getElementById('generateBtn').addEventListener('click', generateModelAndDownload);
+document.getElementById('generateBtn').addEventListener('click', function () {
+    // The generateModelAndDownload function now contains the area check logic
+    generateModelAndDownload();
+});
