@@ -46,10 +46,6 @@
                 <label for="rotation">Rotation (degrees):</label>
                 <input type="number" id="rotation" step="0.1">
             </div>
-            <div class="form-group">
-                <label for="area">Area (km²):</label>
-                <input type="text" id="area" readonly style="background-color: #eee;"> <!-- Added area display -->
-            </div>
 
             <div class="form-group">
                 <label for="latlon-spacing">Lat/Lon Spacing (km):</label>
@@ -92,6 +88,10 @@
             <div class="form-group">
                 <label for="output-dir">Output Directory:</label>
                 <input type="text" id="output-dir" value="/tmp">
+            </div>
+            <div class="form-group">
+                <label for="area">Area (km²):</label>
+                <input type="text" id="area" readonly style="background-color: #eee;"> <!-- Moved area display here -->
             </div>
 
             <button type="button" class="apply-btn" id="apply-btn">Apply changes</button>
