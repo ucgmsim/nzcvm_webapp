@@ -24,9 +24,6 @@ RemainAfterExit=yes
 # Sets the start timeout to 0 seconds, meaning systemd will wait indefinitely for the service to start.
 TimeoutStartSec=0
 
-# Configures systemd to always restart the service if it stops for any reason.
-Restart=always
-
 # ExecStartPre commands are run before starting the service.
 # Get the latest version of docker-compose.yml from the repo.
 # Run a shell script inline. If the /home/nzcvm_webapp/src/nzcvm_webapp dir doesn’t exist, clone; otherwise, pull
