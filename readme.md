@@ -36,6 +36,12 @@ This guide uses **Rootless Docker**, meaning that the Docker installation is for
 * Create a user called `nzcvm_config` to run the systemd service
     *  `sudo useradd -m -s /bin/bash nzcvm_config` where `-m` creates a home directory and `-s /bin/bash` sets the default shell to bash.
 
+* Add the following line to the `nzcvm_config` user's `~/.bashrc` file to point to the user's Docker socket
+    * `export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock`
+
+* Reload the shell
+    * `source ~/.bashrc`
+
 * Temporarily give the `nzcvm_config` user `sudo` privileges to make the next few steps simpler (`sudo` privileges will be revoked later)
     *  `sudo usermod -aG sudo nzcvm_config`
 
@@ -48,8 +54,8 @@ This guide uses **Rootless Docker**, meaning that the Docker installation is for
 
 * Allow the `nzcvm_config` user to linger so it will be available at startup 
     * `sudo loginctl enable-linger $(whoami)`
-* Add the following line to the `nzcvm_config` user's `~/.bashrc` file to point to the user's Docker socket
-    * `export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock`
+
+
 
 * Change back to your main account with `sudo` privileges
     * e.g., `exit`
