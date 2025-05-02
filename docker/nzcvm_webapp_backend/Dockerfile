@@ -19,11 +19,8 @@ RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modellin
 # Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the Flask application file into the container at /app
-# Ensure app.py is in the same directory as this Dockerfile during build context,
-# or adjust the source path accordingly relative to the build context.
-# Assuming build context is /home/arr65/src/nzcvm_config, the source path is correct.
-COPY app.py /app/
+# Copy the Flask application file (app.py) into the container at /app
+COPY docker/nzcvm_webapp_backend/app.py /app/
 
 # Expose port 5000 for inter-container communication (Gunicorn listens here).
 # This informs Docker the container uses this port; it does not publish
