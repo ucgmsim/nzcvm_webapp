@@ -35,13 +35,13 @@ ExecStartPre=/usr/bin/bash -c '\
   fi'
 
 # Use instructions in docker-compose.yml to pull the latest Docker container images 
-ExecStartPre=docker compose -f /home/nzcvm_webapp/src/nzcvm_webapp/docker-compose.yml pull
+ExecStartPre=docker compose -f /mnt/mantle_data/nzcvm_webapp/repo/docker-compose.yml pull
 
 # Use instructions in docker-compose.yml to start the containers
-ExecStart=docker compose -f /home/nzcvm_webapp/src/nzcvm_webapp/docker-compose.yml up -d
+ExecStart=docker compose -f /mnt/mantle_data/nzcvm_webapp/repo/docker-compose.yml up -d
 
 # Stops the Docker containers gracefully when the service is stopped.
-ExecStop=docker compose -f /home/nzcvm_webapp/src/nzcvm_webapp/docker-compose.yml down
+ExecStop=docker compose -f /mnt/mantle_data/nzcvm_webapp/repo/docker-compose.yml down
 
 # Starts the [Install] section, which defines how the service integrates with the system boot process.
 [Install]
