@@ -26,9 +26,9 @@ TimeoutStartSec=0
 
 # ExecStartPre commands are run before starting the service.
 # Get the latest version of docker-compose.yml from the repo.
-# Run a shell script inline. If the /home/nzcvm_webapp/src/nzcvm_webapp dir doesn’t exist, clone; otherwise, pull
+# Run a shell script inline. If the /mnt/mantle_data/nzcvm_webapp/repo dir doesn’t exist, clone; otherwise, pull
 ExecStartPre=/usr/bin/bash -c '\
-  if [ ! -d /home/nzcvm_webapp/src/nzcvm_webapp ]; then \
+  if [ ! -d /mnt/mantle_data/nzcvm_webapp/repo ]; then \
     git clone --branch feat-run-nzcvm-from-website --single-branch https://github.com/ucgmsim/nzcvm_webapp.git /mnt/mantle_data/nzcvm_webapp/repo; \
   else \
     cd /mnt/mantle_data/nzcvm_webapp/repo && git fetch --all && git reset --hard origin/feat-run-nzcvm-from-website; \
