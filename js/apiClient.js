@@ -5,18 +5,18 @@ function getConfigurationDataForFile() {
     return {
         'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed for generation
         'MODEL_VERSION': document.getElementById('model-version').value,
-        'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value).toFixed(6),
-        'ORIGIN_LON': parseFloat(document.getElementById('origin-lng').value).toFixed(6),
-        'EXTENT_X': parseFloat(document.getElementById('extent-x').value).toFixed(3),
-        'EXTENT_Y': parseFloat(document.getElementById('extent-y').value).toFixed(3),
-        'EXTENT_ZMAX': parseFloat(document.getElementById('extent-zmax').value).toFixed(1),
-        'EXTENT_ZMIN': parseFloat(document.getElementById('extent-zmin').value).toFixed(1),
-        'ORIGIN_ROT': parseFloat(document.getElementById('rotation').value).toFixed(1),
-        'EXTENT_Z_SPACING': parseFloat(document.getElementById('z-spacing').value).toFixed(1),
-        'EXTENT_XY_SPACING': parseFloat(document.getElementById('xy-spacing').value).toFixed(1),
-        'MIN_VS': parseFloat(document.getElementById('min-vs').value).toFixed(1),
+        'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
+        'ORIGIN_LON': parseFloat(document.getElementById('origin-lng').value),
+        'EXTENT_X': parseFloat(document.getElementById('extent-x').value),
+        'EXTENT_Y': parseFloat(document.getElementById('extent-y').value),
+        'EXTENT_ZMAX': parseFloat(document.getElementById('extent-zmax').value),
+        'EXTENT_ZMIN': parseFloat(document.getElementById('extent-zmin').value),
+        'ORIGIN_ROT': parseFloat(document.getElementById('rotation').value),
+        'EXTENT_Z_SPACING': parseFloat(document.getElementById('z-spacing').value),
+        'EXTENT_XY_SPACING': parseFloat(document.getElementById('xy-spacing').value),
+        'MIN_VS': parseFloat(document.getElementById('min-vs').value),
         'TOPO_TYPE': document.getElementById('topo-type').value,
-        'OUTPUT_DIR': document.getElementById('output-dir').value || '/tmp/nzcvm_output' // Ensure a default if empty
+        'OUTPUT_DIR': document.getElementById('output-dir').value
     };
 }
 
@@ -47,21 +47,22 @@ async function generateModelAndDownload() {
     statusMessage.textContent = 'Generating model... Please wait.';
     statusMessage.style.color = 'orange';
 
-    // Collect form data for the API request (keys might differ from config file)
+    // Collect form data for the API request, using UPPERCASE keys as expected by the NZCVM backend
     const formData = {
-        origin_lat: parseFloat(document.getElementById('origin-lat').value),
-        origin_lon: parseFloat(document.getElementById('origin-lng').value),
-        extent_x: parseFloat(document.getElementById('extent-x').value),
-        extent_y: parseFloat(document.getElementById('extent-y').value),
-        extent_XY_spacing: parseFloat(document.getElementById('xy-spacing').value),
-        extent_zmax: parseFloat(document.getElementById('extent-zmax').value),
-        extent_zmin: parseFloat(document.getElementById('extent-zmin').value),
-        rotation: parseFloat(document.getElementById('rotation').value),
-        extent_z_spacing: parseFloat(document.getElementById('z-spacing').value),
-        min_vs: parseFloat(document.getElementById('min-vs').value),
-        model_version: document.getElementById('model-version').value,
-        topo_type: document.getElementById('topo-type').value,
-        output_dir: document.getElementById('output-dir').value
+        CALL_TYPE: 'GENERATE_VELOCITY_MOD',
+        MODEL_VERSION: document.getElementById('model-version').value,
+        ORIGIN_LAT: parseFloat(document.getElementById('origin-lat').value),
+        ORIGIN_LON: parseFloat(document.getElementById('origin-lng').value),
+        ORIGIN_ROT: parseFloat(document.getElementById('rotation').value),
+        EXTENT_X: parseFloat(document.getElementById('extent-x').value),
+        EXTENT_Y: parseFloat(document.getElementById('extent-y').value),
+        EXTENT_ZMAX: parseFloat(document.getElementById('extent-zmax').value),
+        EXTENT_ZMIN: parseFloat(document.getElementById('extent-zmin').value),
+        EXTENT_Z_SPACING: parseFloat(document.getElementById('z-spacing').value),
+        EXTENT_LATLON_SPACING: parseFloat(document.getElementById('xy-spacing').value), // Use the key expected by nzcvm.py config
+        MIN_VS: parseFloat(document.getElementById('min-vs').value),
+        TOPO_TYPE: document.getElementById('topo-type').value,
+        OUTPUT_DIR: document.getElementById('output-dir').value || '/tmp/nzcvm_output' // Ensure default if empty
     };
 
     try {
@@ -71,7 +72,7 @@ async function generateModelAndDownload() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(formData),
+            body: JSON.stringify(formData), // Send uppercase keys
         });
 
         if (!response.ok) {
@@ -95,7 +96,7 @@ async function generateModelAndDownload() {
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
-            statusMessage.textContent = 'Model generated and downloaded successfully!';
+            statusMessage.innerHTML = 'Model generated and downloaded successfully! <a href="https://github.com/ucgmsim/velocity_modelling/blob/main/wiki/OutputFormats.md#hdf5-file-structure" target="_blank" rel="noopener noreferrer">click here</a> for information about the output format.';
             statusMessage.style.color = 'green';
         } else {
             // Handle unexpected content type (e.g., HTML error page)

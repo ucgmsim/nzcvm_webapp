@@ -21,24 +21,15 @@ def create_config_file(
     config_data: Dict[str, Union[str, float, int]], directory: str
 ) -> str:
     """Creates a temporary config file from a dictionary.
-
-    Parameters
-    ----------
-    config_data : Dict[str, Union[str, float, int]]
-        Dictionary containing configuration key-value pairs.
-    directory : str
-        The directory path where the config file will be created.
-
-    Returns
-    -------
-    str
-        The full path to the generated configuration file.
+    Assumes keys in config_data are already in the correct (uppercase) format.
     """
     config_content = [f"{key}={value}" for key, value in config_data.items()]
     config_path = os.path.join(directory, "nzcvm.cfg")
     with open(config_path, "w") as f:
         f.write("\n".join(config_content))
     print(f"Generated config file at: {config_path}")
+    print("Config file content:")
+    print("\n".join(config_content))  # Log the actual content written
     return config_path
 
 
@@ -68,6 +59,8 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
         config_path,
         "--out-dir",
         output_dir,
+        "--output-format",
+        "HDF5",
     ]
 
     print(f"Running command: {' '.join(command_args)}")
@@ -151,7 +144,9 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
     print("Received config data:", config_data)
 
     # Ensure all fields required by the nzcvm.py script are present
+    # Use UPPERCASE keys to match what apiClient.js now sends
     required_fields = [
+        "CALL_TYPE",
         "MODEL_VERSION",
         "ORIGIN_LAT",
         "ORIGIN_LON",
@@ -161,13 +156,18 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
         "EXTENT_ZMAX",
         "EXTENT_ZMIN",
         "EXTENT_Z_SPACING",
-        "EXTENT_LATLON_SPACING",
+        "EXTENT_LATLON_SPACING",  # Key expected by nzcvm.py config
         "MIN_VS",
         "TOPO_TYPE",
-        "OUTPUT_DIR",  # Although we override OUTPUT_DIR path below, check if it's sent
+        "OUTPUT_DIR",
     ]
-    if not all(field in config_data for field in required_fields):
-        abort(400, description="Missing required configuration fields")
+    # Check for missing fields using UPPERCASE keys from the received JSON
+    missing_fields = [field for field in required_fields if field not in config_data]
+    if missing_fields:
+        abort(
+            400,
+            description=f"Missing required configuration fields: {', '.join(missing_fields)}",
+        )
 
     # Use temporary directories for isolation and easy cleanup
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -176,8 +176,7 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
         os.makedirs(output_dir, exist_ok=True)  # Ensure output dir exists
 
         # Create the config file within the temp directory
-        # Note: The OUTPUT_DIR value *in the config file* might be ignored by the script
-        # when --out-dir is provided, but we create the file as sent by the frontend.
+        # Pass the original config_data (now with uppercase keys)
         config_path = create_config_file(config_data, temp_dir)
 
         print(
