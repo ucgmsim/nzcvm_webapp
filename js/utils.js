@@ -77,9 +77,25 @@ function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, 
     };
 }
 
+
+
 // Calculate angle between three points (used for rotation)
 function calculateAngle(center, p1, p2) {
     const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
     const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
     return -((angle2 - angle1) * 180 / Math.PI);
+}
+
+/**
+ * Calculate the estimated run time based on the total number of grid points.
+ *
+ * @param {number} totalGridPoints - The total number of grid points (nx * ny * nz).
+ * @returns {number} The estimated run time in minutes. Returns NaN if input is invalid.
+ */
+function calculateApproxRunTime(totalGridPoints) {
+    if (isNaN(totalGridPoints) || totalGridPoints <= 0) {
+        return NaN; // Return NaN for invalid input
+    }
+    // Formula: (33 + totalGridPoints * 2.6014383829e-5)/60.0
+    return (33 + totalGridPoints * 2.6014383829e-5) / 60.0;
 }
