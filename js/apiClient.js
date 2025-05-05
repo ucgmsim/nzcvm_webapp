@@ -1,5 +1,8 @@
 // filepath: /home/arr65/src/nzcvm_webapp/js/apiClient.js
 
+// Global variable to hold the timer interval ID
+let countdownIntervalId = null;
+
 // Function to collect all configuration data from the form for config file download
 function getConfigurationDataForFile() {
     return {
@@ -43,9 +46,69 @@ function downloadConfigFile() {
 
 // Function to trigger the backend model generation and download results
 async function generateModelAndDownload() {
+    // Clear any existing timer interval
+    if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
+        countdownIntervalId = null;
+    }
+
     const statusMessage = document.getElementById('status-message');
-    statusMessage.textContent = 'Generating model... Please wait.';
-    statusMessage.style.color = 'orange';
+    statusMessage.style.color = 'orange'; // Set initial color
+
+    // --- Calculate estimated runtime ---
+    let estimatedSeconds = 0;
+    try {
+        // Read values needed for calculation (ensure they exist and are valid)
+        const extentX = parseFloat(document.getElementById('extent-x').value);
+        const extentY = parseFloat(document.getElementById('extent-y').value);
+        const extentLatlonSpacing = parseFloat(document.getElementById('xy-spacing').value);
+        const extentZmax = parseFloat(document.getElementById('extent-zmax').value);
+        const extentZmin = parseFloat(document.getElementById('extent-zmin').value);
+        const extentZSpacing = parseFloat(document.getElementById('z-spacing').value);
+
+        // Check if calculateGridPoints and calculateApproxRunTime are available
+        if (typeof calculateGridPoints === 'function' && typeof calculateApproxRunTime === 'function') {
+            const gridData = calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing);
+            estimatedSeconds = calculateApproxRunTime(gridData.totalGridPoints);
+        } else {
+            console.warn("Calculation functions not found. Skipping timer estimation.");
+            estimatedSeconds = 0; // Default or skip timer
+        }
+    } catch (calcError) {
+        console.error("Error calculating runtime:", calcError);
+        estimatedSeconds = 0; // Default or skip timer on calculation error
+    }
+
+    let remainingSeconds = Math.max(0, Math.round(estimatedSeconds)); // Ensure non-negative integer
+
+    // --- Timer Update Function ---
+    const updateTimerDisplay = () => {
+        if (remainingSeconds >= 0) {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            statusMessage.textContent = `Generating model... Estimated time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+            // Timer has run out
+            statusMessage.textContent = 'Generation taking longer than expected... Please wait.';
+            statusMessage.style.color = 'darkorange'; // Indicate it's taking longer
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId); // Stop the interval
+                countdownIntervalId = null;
+            }
+        }
+    };
+
+    // --- Start Timer ---
+    if (remainingSeconds > 0) {
+        updateTimerDisplay(); // Initial display
+        countdownIntervalId = setInterval(() => {
+            remainingSeconds--;
+            updateTimerDisplay();
+        }, 1000);
+    } else {
+        // If estimate is 0 or calculation failed, show generic message
+        statusMessage.textContent = 'Generating model... Please wait.';
+    }
 
     // Collect form data for the API request, using UPPERCASE keys as expected by the NZCVM backend
     const formData = {
@@ -65,6 +128,7 @@ async function generateModelAndDownload() {
         OUTPUT_DIR: document.getElementById('output-dir').value || '/tmp/nzcvm_output' // Ensure default if empty
     };
 
+
     try {
         // Send data to backend API endpoint
         const response = await fetch('/run-nzcvm', { // Matches Nginx proxy location
@@ -76,6 +140,11 @@ async function generateModelAndDownload() {
         });
 
         if (!response.ok) {
+            // Clear timer on network error before throwing
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId);
+                countdownIntervalId = null;
+            }
             // Try to get error message from response body
             const errorText = await response.text();
             throw new Error(`Network response was not ok: ${response.statusText}. Server message: ${errorText || 'No details'}`);
@@ -84,6 +153,11 @@ async function generateModelAndDownload() {
         // Check content type before assuming it's a zip
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/zip")) {
+            // Clear timer on success before download starts
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId);
+                countdownIntervalId = null;
+            }
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -99,6 +173,11 @@ async function generateModelAndDownload() {
             statusMessage.innerHTML = 'Model generated and downloaded successfully! <a href="https://github.com/ucgmsim/velocity_modelling/blob/main/wiki/OutputFormats.md#hdf5-file-structure" target="_blank" rel="noopener noreferrer">click here</a> for information about the output format.';
             statusMessage.style.color = 'green';
         } else {
+            // Clear timer on unexpected content type
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId);
+                countdownIntervalId = null;
+            }
             // Handle unexpected content type (e.g., HTML error page)
             const responseText = await response.text();
             console.error('Received unexpected content type:', contentType);
@@ -107,6 +186,11 @@ async function generateModelAndDownload() {
         }
 
     } catch (error) {
+        // Clear timer on any caught error
+        if (countdownIntervalId) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+        }
         console.error('Error generating model:', error);
         statusMessage.textContent = `Error: ${error.message}`; // Display detailed error
         statusMessage.style.color = 'red';
