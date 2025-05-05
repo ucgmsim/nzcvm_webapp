@@ -134,13 +134,15 @@ function displayLocationMarkers(locations) {
             continue;
         }
         const latLng = L.latLng(loc.lat, loc.lng);
+        // Update marker style options to match old_js.js
         const marker = L.circleMarker(latLng, {
-            radius: 5,
-            fillColor: "#00f",
-            color: "#000",
+            radius: 4,          // Changed from 5
+            fillColor: '#3388ff', // Changed from #00f
+            color: '#fff',      // Changed from #000
             weight: 1,
             opacity: 1,
-            fillOpacity: 0.8
+            fillOpacity: 0.8,
+            title: loc.name || `Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}` // Added title property
         }).bindPopup(loc.name || `Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}`);
 
         locationMarkersLayer.addLayer(marker);
@@ -175,13 +177,14 @@ function clearLocationMarkers(resetInput = true) { // Parameter controls if file
 // Add event listener for file upload UI elements when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
     const locationControls = createLocationUploadControls();
-    // Append controls to a suitable container, e.g., map container or a dedicated sidebar
-    const controlsContainer = document.getElementById('controls'); // Assuming you have a div with id='controls'
-    if (controlsContainer) {
-        controlsContainer.appendChild(locationControls);
+    // Append controls directly to the map container
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+        mapContainer.appendChild(locationControls);
     } else {
-        // Fallback: append near the map if controls container doesn't exist
-        document.getElementById('map-container').parentNode.insertBefore(locationControls, document.getElementById('map-container').nextSibling);
+        console.error("Map container not found. Cannot append location controls.");
+        // Fallback or alternative placement if needed
+        // document.body.appendChild(locationControls);
     }
 
     // Set up the event listener for file input
@@ -192,23 +195,28 @@ document.addEventListener('DOMContentLoaded', function () {
 function createLocationUploadControls() {
     const controlPanel = document.createElement('div');
     controlPanel.id = 'location-upload-panel';
+    // Apply styles for top-right positioning
+    controlPanel.style.position = 'absolute';
+    controlPanel.style.top = '10px';
+    controlPanel.style.right = '10px';
+    controlPanel.style.zIndex = '1000'; // Ensure it's above map tiles but potentially below other map controls if needed
     controlPanel.style.padding = '10px';
-    controlPanel.style.backgroundColor = '#f9f9f9';
+    controlPanel.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'; // Slightly transparent background
     controlPanel.style.border = '1px solid #ccc';
     controlPanel.style.borderRadius = '5px';
-    controlPanel.style.marginTop = '10px';
+    controlPanel.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)'; // Add shadow for better visibility
+    // controlPanel.style.marginTop = '10px'; // Remove margin if using absolute positioning
 
     controlPanel.innerHTML = `
-        <div style="margin-bottom: 8px; font-weight: bold;">Upload and display locations</div>
-        <div style="margin-bottom: 8px; font-size: 0.9em;">Accepted formats: .csv (lng,lat,[name]) or .ll (lng lat [name])</div>
+        <div style="margin-bottom: 8px; font-weight: bold;">Upload Locations</div>
+        <div style="margin-bottom: 8px; font-size: 0.9em;">(.csv: lng,lat,[name] or .ll: lng lat [name])</div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- Standard file input -->
             <input type="file" id="location-file-input" accept=".csv,.ll" style="padding: 5px;" />
             <div style="display: flex; align-items: center; gap: 5px;">
                 <input type="checkbox" id="file-has-headers" checked>
-                <label for="file-has-headers" style="font-size: 0.9em;">.csv file has headers (lng, lat, name)</label>
+                <label for="file-has-headers" style="font-size: 0.9em;">.csv has headers</label>
             </div>
-            <button id="clear-locations-btn" style="padding: 5px 10px;">Clear Displayed Locations</button>
+            <button id="clear-locations-btn" style="padding: 5px 10px;">Clear Locations</button>
         </div>
     `;
 

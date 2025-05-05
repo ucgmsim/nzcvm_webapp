@@ -152,13 +152,8 @@ function applyRotation() {
 
     // Apply rotation transformation using CSS with absolute coordinates
     // This ensures rotation works correctly at any zoom level
-    if (rectangle._path) { // Check if path exists
-        rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
-        rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
-    }
-
-    // Update form with new rotation value
-    document.getElementById('rotation').value = rotationAngle.toFixed(1);
+    rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
+    rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
 
     // Update rotation handle position
     updateRotationHandlePosition();
@@ -228,10 +223,15 @@ function updateResizeHandlePosition() {
     // Add mousedown handler to resize handle
     resizeHandle.on('mousedown', function (e) {
         isResizing = true;
+        lastPos = e.latlng; // Added this line to match old_js.js
+        map.dragging.disable(); // Disable map dragging while resizing
+
+        // Store initial handle position and rectangle bounds
         initialResizeHandlePos = e.latlng;
         initialRectBounds = rectangle.getBounds();
         rectangleCenter = initialRectBounds.getCenter();
-        map.dragging.disable();
+
+        // Prevent event propagation
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
     });
@@ -251,114 +251,166 @@ rectangle.on('mousedown', function (e) {
     L.DomEvent.preventDefault(e);
 });
 
-// Handle mouse movement
+// Calculate angle between three points (Added from old_js.js)
+function calculateAngle(center, p1, p2) {
+    const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
+    const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
+    return ((angle2 - angle1) * 180 / Math.PI);
+}
+
+
+// Handle mouse movement (Reverted to old_js.js version)
 document.addEventListener('mousemove', function (e) {
-    if (!(isDragging || isResizing || isRotating)) return;
+    if (!isDragging && !isResizing && !isRotating) return;
 
     // Convert screen position to map coordinates
     const containerPoint = new L.Point(e.clientX, e.clientY);
     const layerPoint = map.containerPointToLayerPoint(containerPoint);
     const latlng = map.layerPointToLatLng(layerPoint);
 
-    if (isDragging && lastPos) {
-        const offsetLat = latlng.lat - lastPos.lat;
-        const offsetLng = latlng.lng - lastPos.lng;
-        const newBounds = rectangle.getBounds().map(coord => [coord[0] + offsetLat, coord[1] + offsetLng]);
+    if (isRotating && rectangleCenter) {
+        // Calculate rotation angle and reverse the direction
+        const angleDelta = -calculateAngle(rectangleCenter, lastPos, latlng);
+        rotationAngle = (rotationAngle + angleDelta) % 360;
+
+        // Apply the rotation
+        applyRotation();
+    } else if (isDragging) {
+        // Calculate the movement delta
+        const latDiff = latlng.lat - lastPos.lat;
+        const lngDiff = latlng.lng - lastPos.lng;
+        const currentBounds = rectangle.getBounds();
+        const sw = currentBounds.getSouthWest();
+        const ne = currentBounds.getNorthEast();
+
+        // Update rectangle position
+        rectangle.setBounds([
+            [sw.lat + latDiff, sw.lng + lngDiff],
+            [ne.lat + latDiff, ne.lng + lngDiff],
+        ]);
+
+        // Reapply rotation after moving
+        applyRotation();
+
+        // Update form values
+        updateFormValues();
+    } else if (isResizing && rectangleCenter && initialResizeHandlePos && initialRectBounds) {
+        // Get current mouse position and initial handle position in screen coordinates
+        const currentMousePoint = map.latLngToContainerPoint(latlng);
+        const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
+        const centerPoint = map.latLngToContainerPoint(rectangleCenter);
+
+        // Calculate rotation vectors once (optimization)
+        const angle = rotationAngle * Math.PI / 180;
+        const cosAngle = Math.cos(angle);
+        const sinAngle = Math.sin(angle);
+
+        // Calculate mouse movement vector
+        const dx = currentMousePoint.x - initialMousePoint.x;
+        const dy = currentMousePoint.y - initialMousePoint.y;
+
+        // Project mouse movement onto the rotated axes of the rectangle
+        const projectionOnWidth = dx * cosAngle + dy * sinAngle;
+        const projectionOnHeight = -(dx * -sinAngle + dy * cosAngle);
+
+        // Get initial rectangle dimensions
+        const origSW = initialRectBounds.getSouthWest();
+        const origNE = initialRectBounds.getNorthEast();
+        const origSWPoint = map.latLngToContainerPoint(origSW);
+        const origNEPoint = map.latLngToContainerPoint(origNE);
+        const initialWidth = origNEPoint.x - origSWPoint.x;
+        const initialHeight = origSWPoint.y - origNEPoint.y;
+
+        // Calculate scale factors with minimum scale limit
+        const minScale = 0.05;
+        let scaleX = Math.max((initialWidth + projectionOnWidth) / initialWidth || 1, minScale);
+        let scaleY = Math.max((initialHeight + projectionOnHeight) / initialHeight || 1, minScale);
+
+        // Calculate new bounds
+        const center = initialRectBounds.getCenter();
+        const width = Math.abs(origNE.lng - origSW.lng) * scaleX;
+        const height = Math.abs(origNE.lat - origSW.lat) * scaleY;
+        const halfWidthLng = width / 2;
+        const halfHeightLat = height / 2;
+
+        const newBounds = L.latLngBounds(
+            L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLng),
+            L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLng)
+        );
         rectangle.setBounds(newBounds);
-        applyRotation(); // Re-apply rotation and update handles
-        updateFormValues(); // Update form origin
-    } else if (isResizing && resizeHandle && rectangleCenter) {
-        // Calculate vector from center to current mouse position
-        const centerPoint = map.latLngToLayerPoint(rectangleCenter);
-        const currentPoint = map.latLngToLayerPoint(latlng);
-        const currentVecX = currentPoint.x - centerPoint.x;
-        const currentVecY = currentPoint.y - centerPoint.y;
 
-        // Rotate this vector back by -rotationAngle to align with axes
-        const angle = -rotationAngle * (Math.PI / 180);
-        const projectedX = currentVecX * Math.cos(angle) - currentVecY * Math.sin(angle);
-        const projectedY = currentVecX * Math.sin(angle) + currentVecY * Math.cos(angle);
-
-        // Calculate new dimensions based on projected distances (these are half-extents in pixels)
-        const newWidthKm = Math.abs(projectedX) * 2 / 1000 * Math.pow(2, 18 - map.getZoom()); // Rough pixel to km conversion (needs refinement)
-        const newHeightKm = Math.abs(projectedY) * 2 / 1000 * Math.pow(2, 18 - map.getZoom()); // Rough pixel to km conversion (needs refinement)
-
-        // Update rectangle bounds based on new dimensions and center
-        const newBounds = calculateBoundsFromOriginAndExtents(rectangleCenter.lat, rectangleCenter.lng, newWidthKm, newHeightKm);
-        rectangle.setBounds(newBounds);
-
-        // Calculate new extents in KM from the new bounds
-        const newSW = newBounds.getSouthWest();
-        const newNE = newBounds.getNorthEast();
-        const centerLat = newBounds.getCenter().lat;
-        const latDiff = Math.abs(newNE.lat - newSW.lat);
-        const lngDiff = Math.abs(newNE.lng - newSW.lng);
-        const kmDimensions = degreesToKm(latDiff, lngDiff, centerLat);
-
-        // Update extent form fields
-        document.getElementById('extent-x').value = kmDimensions.lngKm.toFixed(3);
-        document.getElementById('extent-y').value = kmDimensions.latKm.toFixed(3);
+        // Update the resize handle position
+        if (resizeHandle) {
+            resizeHandle.setLatLng(latlng);
+        }
 
         // Reapply rotation
         applyRotation();
 
-        // Update form values (including grid points)
+        // Update form values
         updateFormValues();
-    } else if (isRotating && rectangleCenter) {
-        const angleDegrees = calculateAngle(rectangleCenter, lastPos, latlng);
-        rotationAngle = (rotationAngle + angleDegrees) % 360;
-        applyRotation();
     }
 
     // Update last position
     lastPos = latlng;
 });
 
-// End interaction on mouseup
+// End interaction on mouseup (Reverted to old_js.js version)
 document.addEventListener('mouseup', function () {
-    if (isDragging || isResizing || isRotating) {
-        isDragging = false;
-        isResizing = false;
-        isRotating = false;
-        lastPos = null;
-        map.dragging.enable();
-        // Final update of form values after interaction ends
-        updateFormValues();
-    }
+    if (!(isDragging || isResizing || isRotating)) return;
+
+    // End interaction
+    isDragging = false;
+    isResizing = false;
+    isRotating = false;
+    lastPos = null;
+
+    // Re-enable map dragging
+    map.dragging.enable();
+
+    // Update form values when interaction ends
+    updateFormValues();
 });
 
-// Reset cursor when mouse leaves the rectangle
+// Reset cursor when mouse leaves the rectangle (Reverted to old_js.js version)
 rectangle.on('mouseout', function () {
-    // Optional: Reset cursor if needed, though mouseup handles state reset
+    rectangle._path.style.cursor = '';
 });
 
-// Initialize rotation and resize handles when layer is added
+// Initialize rotation and resize handles when layer is added (Reverted to old_js.js version)
 map.on('layeradd', function (e) {
     if (e.layer === rectangle) {
-        createRotationHandle();
-        createResizeHandle();
+        setTimeout(function () {
+            applyRotation();
+            createRotationHandle();
+            createResizeHandle();
+        }, 100);
     }
 });
 
-// Update handles when map changes
+// Update handles when map changes (Reverted to old_js.js version)
 map.on('zoomend moveend dragend zoom move viewreset', function () {
-    if (rectangle && map.hasLayer(rectangle)) {
-        applyRotation(); // Re-applies rotation and updates handles
-    }
-});
-
-// Add event handler for when the map is redrawn (might be needed for some Leaflet versions)
-map.on('redraw', function () {
-    if (rectangle && map.hasLayer(rectangle)) {
+    if (rectangle) {
+        // Ensure rectangle rotation is properly maintained after any map change
         applyRotation();
     }
 });
 
-// Initialize rotation and resize handles after a short delay to ensure map is ready
+// Add event handler for when the map is redrawn (Reverted to old_js.js version)
+map.on('redraw', function () {
+    setTimeout(function () {
+        if (rectangle) {
+            applyRotation();
+        }
+    }, 50);
+});
+
+// Initialize rotation and resize handles after a short delay (Reverted to old_js.js version)
 setTimeout(function () {
-    if (rectangle && map.hasLayer(rectangle)) {
-        createRotationHandle();
-        createResizeHandle();
-        applyRotation(); // Apply initial rotation if any
-    }
+    // if (rectangle && map.hasLayer(rectangle)) { // Removed check
+    //     createRotationHandle(); // Removed
+    //     createResizeHandle(); // Removed
+    //     applyRotation(); // Apply initial rotation if any // Kept
+    // }
+    applyRotation(); // Only call applyRotation as per old_js.js
 }, 500);

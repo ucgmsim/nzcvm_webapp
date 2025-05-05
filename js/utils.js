@@ -81,5 +81,5 @@ function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, 
 function calculateAngle(center, p1, p2) {
     const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
     const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
-    return ((angle2 - angle1) * 180 / Math.PI);
+    return -((angle2 - angle1) * 180 / Math.PI);
 }

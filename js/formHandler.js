@@ -30,31 +30,45 @@ function updateFormValues() {
     const originLat = center.lat;
     const originLng = center.lng;
 
+    // Calculate width and height in KM using map.distance for accuracy
+    const southWest = bounds.getSouthWest();
+    const northEast = bounds.getNorthEast();
+    const northWest = bounds.getNorthWest(); // Use NW for height calculation start
+
+    // Calculate width (distance between SW and SE or NW and NE along latitude)
+    const widthMeters = map.distance(southWest, L.latLng(southWest.lat, northEast.lng));
+    // Calculate height (distance between NW and SW or NE and SE along longitude)
+    const heightMeters = map.distance(northWest, southWest);
+
+    const widthKm = widthMeters / 1000;
+    const heightKm = heightMeters / 1000;
+
     // Update form fields for origin
     document.getElementById('origin-lat').value = originLat.toFixed(6);
     document.getElementById('origin-lng').value = originLng.toFixed(6);
-    // Keep extent-x, extent-y, rotation as they are (driven by user input or map interaction)
+
+    // Update form fields for extents
+    document.getElementById('extent-x').value = widthKm.toFixed(3);
+    document.getElementById('extent-y').value = heightKm.toFixed(3);
+
+    // Update rotation field based on the current angle from map interaction
+    document.getElementById('rotation').value = rotationAngle.toFixed(1);
 
     // Update grid point display
     updateGridPointDisplay();
 }
 
-// Initialize form values on load
-document.addEventListener('DOMContentLoaded', function () {
-    // Initial calculation and display of grid points
-    updateGridPointDisplay();
-    // Initial update of form origin based on rectangle
-    updateFormValues();
-});
-
-// Handle form submission (Apply changes button) to update rectangle
-document.getElementById('apply-btn').addEventListener('click', function () {
+// Function to update the rectangle based on form values
+function updateRectangleFromForm() {
     const originLat = parseFloat(document.getElementById('origin-lat').value);
     const originLng = parseFloat(document.getElementById('origin-lng').value);
     const extentX = parseFloat(document.getElementById('extent-x').value);
     const extentY = parseFloat(document.getElementById('extent-y').value);
-    const newRotation = parseFloat(document.getElementById('rotation').value);
+    // Read the raw value from the input for rotation
+    const newRotationRaw = document.getElementById('rotation').value;
+    const newRotation = parseFloat(newRotationRaw); // Parse it
 
+    // Check if parsing was successful and other values are valid
     if (!isNaN(originLat) && !isNaN(originLng) && !isNaN(extentX) && !isNaN(extentY) && extentX > 0 && extentY > 0 && !isNaN(newRotation)) {
         // Calculate new bounds based on form inputs
         const newBounds = calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, extentY);
@@ -64,10 +78,26 @@ document.getElementById('apply-btn').addEventListener('click', function () {
         rotationAngle = newRotation;
         applyRotation(); // This also updates handles
 
-        // Update form values after applying changes
-        updateFormValues(); // This calls updateGridPointDisplay
+        // Update grid point display as extents might have changed
+        updateGridPointDisplay();
+    } else {
+        // Handle invalid input if necessary, e.g., show a message or revert
+        console.warn("Invalid input detected in form. Rectangle not updated.");
+        // Optionally, if rotation parsing failed but others are okay, maybe just update bounds?
+        // Or provide feedback to the user about the invalid rotation input.
     }
+}
+
+// Initialize form values on load
+document.addEventListener('DOMContentLoaded', function () {
+    // Initial calculation and display of grid points
+    updateGridPointDisplay();
+    // Initial update of form origin based on rectangle
+    // The timeout in rectangleControls.js handles initial applyRotation which calls updateFormValues
 });
+
+// Remove form submission handler for the now-deleted Apply button
+// document.getElementById('apply-btn').addEventListener('click', function () { ... });
 
 // Add event listeners to relevant input fields to update grid points on change
 const gridPointInputs = [
@@ -77,6 +107,18 @@ const gridPointInputs = [
 gridPointInputs.forEach(id => {
     const inputElement = document.getElementById(id);
     if (inputElement) {
+        // These inputs only affect the grid calculation display directly
         inputElement.addEventListener('input', updateGridPointDisplay);
+    }
+});
+
+// Add event listeners to form fields that control rectangle geometry/rotation
+const rectangleControlInputs = [
+    'origin-lat', 'origin-lng', 'extent-x', 'extent-y', 'rotation'
+];
+rectangleControlInputs.forEach(id => {
+    const inputElement = document.getElementById(id);
+    if (inputElement) {
+        inputElement.addEventListener('input', updateRectangleFromForm);
     }
 });
