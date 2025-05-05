@@ -36,20 +36,15 @@
             </div>
             <div class="form-group">
                 <label for="extent-x">Extent X (km):</label>
-                <input type="number" id="extent-x" step="0.001">
+                <input type="number" id="extent-x" step="0.001" value="300">
             </div>
             <div class="form-group">
                 <label for="extent-y">Extent Y (km):</label>
-                <input type="number" id="extent-y" step="0.001">
+                <input type="number" id="extent-y" step="0.001" value="300">
             </div>
             <div class="form-group">
-                <label for="rotation">Rotation (degrees):</label>
-                <input type="number" id="rotation" step="0.1">
-            </div>
-
-            <div class="form-group">
-                <label for="latlon-spacing">Lat/Lon Spacing (km):</label>
-                <input type="number" id="latlon-spacing" step="0.1" value="0.9">
+                <label for="xy-spacing">X-Y Spacing (km):</label>
+                <input type="number" id="xy-spacing" step="0.1" value="0.4">
             </div>
             <div class="form-group">
                 <label for="extent-zmax">Extent Z Max (km):</label>
@@ -63,6 +58,12 @@
                 <label for="z-spacing">Z Spacing (km):</label>
                 <input type="number" id="z-spacing" step="0.1" value="0.2">
             </div>
+
+            <div class="form-group">
+                <label for="rotation">Rotation (degrees):</label>
+                <input type="number" id="rotation" step="0.1">
+            </div>
+
             <div class="form-group">
                 <label for="min-vs">Min Vs (m/s):</label>
                 <input type="number" id="min-vs" step="0.1" value="0.5">
@@ -89,9 +90,14 @@
                 <label for="output-dir">Output Directory:</label>
                 <input type="text" id="output-dir" value="/tmp">
             </div>
-            <div class="form-group">
-                <label for="area">Domain area (km²):</label>
-                <input type="text" id="area" readonly style="background-color: #eee;">
+
+            <div id="grid-calculations" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ccc;">
+                <h4>Calculated Grid Dimensions:</h4>
+                <div id="grid-nx-display">Nx: <span>---</span></div>
+                <div id="grid-ny-display">Ny: <span>---</span></div>
+                <div id="grid-nz-display">Nz: <span>---</span></div>
+                <div id="grid-total-display" style="margin-top: 5px; font-weight: bold;">Total Points: <span>---</span>
+                </div>
             </div>
 
             <button type="button" class="apply-btn" id="apply-btn">Apply changes</button>
@@ -103,8 +109,13 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Load custom JavaScript -->
-    <script src="js/nzcvm_config_map.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/mapSetup.js"></script>
+    <script src="js/rectangleControls.js"></script>
+    <script src="js/formHandler.js"></script>
+    <script src="js/geojsonHandler.js"></script>
+    <script src="js/locationUpload.js"></script>
+    <script src="js/apiClient.js"></script>
 </body>
 
 </html>
