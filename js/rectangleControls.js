@@ -280,7 +280,8 @@ document.addEventListener('mousemove', function (e) {
     if (isRotating && rectangleCenter) {
         // Calculate rotation angle and reverse the direction
         const angleDelta = -calculateAngle(rectangleCenter, lastPos, latlng);
-        rotationAngle = (rotationAngle + angleDelta) % 360;
+        // Ensure rotationAngle stays within [0, 360)
+        rotationAngle = (((rotationAngle + angleDelta) % 360) + 360) % 360;
 
         // Apply the rotation
         applyRotation();

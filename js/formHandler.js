@@ -80,8 +80,8 @@ function updateRectangleFromForm() {
         const newBounds = calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, extentY);
         rectangle.setBounds(newBounds);
 
-        // Apply rotation
-        rotationAngle = newRotation;
+        // Apply rotation, ensuring it's within [0, 360)
+        rotationAngle = ((newRotation % 360) + 360) % 360;
         applyRotation(); // This also updates handles
 
         // Update grid point display as extents might have changed
