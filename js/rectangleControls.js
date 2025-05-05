@@ -144,16 +144,25 @@ function updateRotationHandlePosition() {
 
 // Function to apply rotation to rectangle
 function applyRotation() {
+    // Add check for rectangle existence
+    if (!rectangle) return;
+
     const center = rectangle.getBounds().getCenter();
     rectangleCenter = center;
 
     // Get the current pixel position of the center
     const centerPoint = map.latLngToLayerPoint(center);
 
-    // Apply rotation transformation using CSS with absolute coordinates
-    // This ensures rotation works correctly at any zoom level
-    rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
-    rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
+    // Add check for rectangle._path before applying styles
+    if (rectangle._path) {
+        // Apply rotation transformation using CSS with absolute coordinates
+        // This ensures rotation works correctly at any zoom level
+        rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
+        rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
+    } else {
+        console.warn("Rectangle path not found during applyRotation.");
+    }
+
 
     // Update rotation handle position
     updateRotationHandlePosition();
@@ -405,12 +414,11 @@ map.on('redraw', function () {
     }, 50);
 });
 
-// Initialize rotation and resize handles after a short delay (Reverted to old_js.js version)
+// Initialize rotation and resize handles after a short delay
 setTimeout(function () {
-    // if (rectangle && map.hasLayer(rectangle)) { // Removed check
-    //     createRotationHandle(); // Removed
-    //     createResizeHandle(); // Removed
-    //     applyRotation(); // Apply initial rotation if any // Kept
-    // }
-    applyRotation(); // Only call applyRotation as per old_js.js
-}, 500);
+    if (rectangle && map.hasLayer(rectangle)) { // Add check back for safety
+        applyRotation(); // Apply initial rotation/styles and create handles
+        // Remove form update call - form is now initialized on DOMContentLoaded
+        // updateFormValues();
+    }
+}, 500); // Keep delay to allow Leaflet to potentially render first

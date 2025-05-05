@@ -21,7 +21,7 @@ function updateGridPointDisplay() {
 }
 
 
-// Function to update form with current rectangle bounds
+// Function to update form with current rectangle bounds (called during/after map interaction)
 function updateFormValues() {
     if (!rectangle) return; // Ensure rectangle exists
 
@@ -60,6 +60,12 @@ function updateFormValues() {
 
 // Function to update the rectangle based on form values
 function updateRectangleFromForm() {
+    // Add check to ensure rectangle and its path are initialized
+    if (!rectangle || !rectangle._path) {
+        console.warn("Rectangle not fully initialized yet. Skipping form update.");
+        return;
+    }
+
     const originLat = parseFloat(document.getElementById('origin-lat').value);
     const originLng = parseFloat(document.getElementById('origin-lng').value);
     const extentX = parseFloat(document.getElementById('extent-x').value);
@@ -88,12 +94,20 @@ function updateRectangleFromForm() {
     }
 }
 
-// Initialize form values on load
+// Initialize form values on load directly from defaults
 document.addEventListener('DOMContentLoaded', function () {
-    // Initial calculation and display of grid points
+    // Set form fields to initial default values
+    // Use values from mapSetup.js for consistency
+    document.getElementById('origin-lat').value = initialOriginLat.toFixed(6);
+    document.getElementById('origin-lng').value = initialOriginLng.toFixed(6);
+    document.getElementById('extent-x').value = initialExtentX.toFixed(3);
+    document.getElementById('extent-y').value = initialExtentY.toFixed(3);
+    // Rotation defaults to 0 if not specified otherwise
+    document.getElementById('rotation').value = (rotationAngle || 0).toFixed(1);
+    // Other fields retain their HTML defaults (e.g., xy-spacing, z-values, min-vs)
+
+    // Initial calculation and display of grid points based on defaults
     updateGridPointDisplay();
-    // Initial update of form origin based on rectangle
-    // The timeout in rectangleControls.js handles initial applyRotation which calls updateFormValues
 });
 
 // Remove form submission handler for the now-deleted Apply button
