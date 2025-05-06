@@ -11,7 +11,7 @@ services:
     # without needing to copy it into the container image.
     volumes:
       # - /mnt/mantle_data/nzcvm_webapp/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
-      ## Quick change for local development
+      ## Uncomment the following lines for easier local development
       - /home/arr65/src/velocity_modelling/velocity_modelling/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
       # Mount app.py for development, allowing changes without rebuilding
       - ./docker/nzcvm_webapp_backend/app.py:/app/app.py
@@ -31,6 +31,8 @@ services:
     container_name: nzcvm_webapp_frontend # Simplified container name
     ports:
       - "8888:80" # Map host port 8888 to container port 80 (Nginx)
+
+    ## Uncomment the following lines for easier local development  
     # Mount website source files for development
     volumes:
       - ./index.html:/usr/share/nginx/html/index.html

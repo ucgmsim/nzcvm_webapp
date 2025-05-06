@@ -1,4 +1,4 @@
-// filepath: /home/arr65/src/nzcvm_webapp/js/rectangleControls.js
+// Handles rectangle creation and manipulation on the map
 
 // Create a rectangle using initial bounds calculated from mapSetup parameters
 const initialBounds = calculateBoundsFromOriginAndExtents(
@@ -144,7 +144,7 @@ function updateRotationHandlePosition() {
 
 // Function to apply rotation to rectangle
 function applyRotation() {
-    // Add check for rectangle existence
+    // Check for rectangle existence
     if (!rectangle) return;
 
     const center = rectangle.getBounds().getCenter();
@@ -153,7 +153,7 @@ function applyRotation() {
     // Get the current pixel position of the center
     const centerPoint = map.latLngToLayerPoint(center);
 
-    // Add check for rectangle._path before applying styles
+    // Check for rectangle._path before applying styles
     if (rectangle._path) {
         // Apply rotation transformation using CSS with absolute coordinates
         // This ensures rotation works correctly at any zoom level
@@ -232,7 +232,7 @@ function updateResizeHandlePosition() {
     // Add mousedown handler to resize handle
     resizeHandle.on('mousedown', function (e) {
         isResizing = true;
-        lastPos = e.latlng; // Added this line to match old_js.js
+        lastPos = e.latlng;
         map.dragging.disable(); // Disable map dragging while resizing
 
         // Store initial handle position and rectangle bounds
@@ -260,15 +260,8 @@ rectangle.on('mousedown', function (e) {
     L.DomEvent.preventDefault(e);
 });
 
-// Calculate angle between three points (Added from old_js.js)
-function calculateAngle(center, p1, p2) {
-    const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
-    const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
-    return ((angle2 - angle1) * 180 / Math.PI);
-}
 
-
-// Handle mouse movement (Reverted to old_js.js version)
+// Handle mouse movement
 document.addEventListener('mousemove', function (e) {
     if (!isDragging && !isResizing && !isRotating) return;
 
@@ -278,7 +271,7 @@ document.addEventListener('mousemove', function (e) {
     const latlng = map.layerPointToLatLng(layerPoint);
 
     if (isRotating && rectangleCenter) {
-        // Calculate rotation angle and reverse the direction
+        // Calculate rotation angle (note the negative sign)
         const angleDelta = -calculateAngle(rectangleCenter, lastPos, latlng);
         // Ensure rotationAngle stays within [0, 360)
         rotationAngle = (((rotationAngle + angleDelta) % 360) + 360) % 360;
@@ -365,7 +358,7 @@ document.addEventListener('mousemove', function (e) {
     lastPos = latlng;
 });
 
-// End interaction on mouseup (Reverted to old_js.js version)
+// End interaction on mouseup
 document.addEventListener('mouseup', function () {
     if (!(isDragging || isResizing || isRotating)) return;
 
@@ -382,12 +375,12 @@ document.addEventListener('mouseup', function () {
     updateFormValues();
 });
 
-// Reset cursor when mouse leaves the rectangle (Reverted to old_js.js version)
+// Reset cursor when mouse leaves the rectangle
 rectangle.on('mouseout', function () {
     rectangle._path.style.cursor = '';
 });
 
-// Initialize rotation and resize handles when layer is added (Reverted to old_js.js version)
+// Initialize rotation and resize handles when layer is added
 map.on('layeradd', function (e) {
     if (e.layer === rectangle) {
         setTimeout(function () {
@@ -398,7 +391,7 @@ map.on('layeradd', function (e) {
     }
 });
 
-// Update handles when map changes (Reverted to old_js.js version)
+// Update handles when map changes
 map.on('zoomend moveend dragend zoom move viewreset', function () {
     if (rectangle) {
         // Ensure rectangle rotation is properly maintained after any map change
@@ -406,7 +399,7 @@ map.on('zoomend moveend dragend zoom move viewreset', function () {
     }
 });
 
-// Add event handler for when the map is redrawn (Reverted to old_js.js version)
+// Add event handler for when the map is redrawn
 map.on('redraw', function () {
     setTimeout(function () {
         if (rectangle) {
@@ -419,7 +412,5 @@ map.on('redraw', function () {
 setTimeout(function () {
     if (rectangle && map.hasLayer(rectangle)) { // Add check back for safety
         applyRotation(); // Apply initial rotation/styles and create handles
-        // Remove form update call - form is now initialized on DOMContentLoaded
-        // updateFormValues();
     }
-}, 500); // Keep delay to allow Leaflet to potentially render first
+}, 500); // Use a delay to allow Leaflet to render first

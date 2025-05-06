@@ -1,4 +1,4 @@
-// filepath: /home/arr65/src/nzcvm_webapp/js/utils.js
+// Utility functions for handling geographic coordinates and grid calculations
 
 // Function to convert kilometers to degrees latitude/longitude
 function kmToDegrees(km, centerLat) {
@@ -43,6 +43,26 @@ function calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, exte
     ];
 }
 
+
+/**
+ * Calculate the angle in degrees between two vectors formed by three points.
+ * The vectors are (p1 - center) and (p2 - center).
+ * The angle is measured from the vector (center to p1) to the vector (center to p2).
+ *
+ * @param {{lat: number, lng: number}} center - The common point (vertex) of the two vectors.
+ * @param {{lat: number, lng: number}} p1 - The end point of the first vector.
+ * @param {{lat: number, lng: number}} p2 - The end point of the second vector.
+ * @returns {number} The angle in degrees. Positive values indicate a counter-clockwise
+ *                   angle from vector (center-p1) to vector (center-p2).
+ */
+// Calculate angle between three points (used for rotation)
+function calculateAngle(center, p1, p2) {
+    const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
+    const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
+    return ((angle2 - angle1) * 180 / Math.PI);
+}
+
+
 /**
  * Calculate the dimensions and total number of points in a 3D velocity model grid.
  *
@@ -63,7 +83,7 @@ function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, 
     // Calculate grid dimensions
     const nx = Math.round(extentX / extentLatlonSpacing);
     const ny = Math.round(extentY / extentLatlonSpacing);
-    // Ensure nz is at least 1 if zmax equals zmin, handle potential division by zero if zSpacing is 0 (already checked above)
+    // Ensure nz is at least 1 if zmax equals zmin
     const nz = Math.max(1, Math.round((extentZmax - extentZmin) / extentZSpacing));
 
     // Calculate total number of grid points
@@ -78,16 +98,9 @@ function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, 
 }
 
 
-
-// Calculate angle between three points (used for rotation)
-function calculateAngle(center, p1, p2) {
-    const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
-    const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
-    return -((angle2 - angle1) * 180 / Math.PI);
-}
-
 /**
  * Calculate the estimated run time based on the total number of grid points.
+ * The parameters in the formula are derived from test runs.
  *
  * @param {number} totalGridPoints - The total number of grid points (nx * ny * nz).
  * @returns {number} The estimated run time in seconds. Returns NaN if input is invalid.

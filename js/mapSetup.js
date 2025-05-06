@@ -1,3 +1,7 @@
+// This file sets up the Leaflet map
+// Leaflet.AutoGraticule was implemented following the example at:
+// https://www.npmjs.com/package/leaflet-auto-graticule
+
 import L from "leaflet";
 import AutoGraticule from "leaflet-auto-graticule";
 

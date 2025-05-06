@@ -1,4 +1,4 @@
-// filepath: /home/arr65/src/nzcvm_webapp/js/locationUpload.js
+// Functions for station file uploads
 
 // Variables for location markers from uploaded files
 let locationMarkers = [];
@@ -15,7 +15,7 @@ function handleLocationFileUpload(event) {
     }
 
     // A file was selected, clear previous markers
-    clearLocationMarkers(false); // Don't reset input yet
+    clearLocationMarkers(false);
 
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -134,11 +134,10 @@ function displayLocationMarkers(locations) {
             continue;
         }
         const latLng = L.latLng(loc.lat, loc.lng);
-        // Update marker style options to match old_js.js
         const marker = L.circleMarker(latLng, {
-            radius: 4,          // Changed from 5
-            fillColor: '#3388ff', // Changed from #00f
-            color: '#fff',      // Changed from #000
+            radius: 4,
+            fillColor: '#3388ff',
+            color: '#fff',
             weight: 1,
             opacity: 1,
             fillOpacity: 0.8,
@@ -195,12 +194,11 @@ document.addEventListener('DOMContentLoaded', function () {
 function createLocationUploadControls() {
     const controlPanel = document.createElement('div');
     controlPanel.id = 'location-upload-panel';
-    // Apply styles for bottom-right positioning
     controlPanel.style.position = 'absolute';
-    controlPanel.style.top = 'auto'; // Ensure top is not fixed, allowing content to define height from bottom
+    controlPanel.style.top = 'auto';
     controlPanel.style.bottom = '25px';
     controlPanel.style.right = '10px';
-    controlPanel.style.zIndex = '1000'; // Ensure it's above map tiles but potentially below other map controls if needed
+    controlPanel.style.zIndex = '1000';
     controlPanel.style.padding = '10px';
     controlPanel.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'; // Slightly transparent background
     controlPanel.style.border = '1px solid #ccc';
