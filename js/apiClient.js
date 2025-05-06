@@ -1,12 +1,10 @@
-// filepath: /home/arr65/src/nzcvm_webapp/js/apiClient.js
-
 // Global variable to hold the timer interval ID
 let countdownIntervalId = null;
 
 // Function to collect all configuration data from the form for config file download
 function getConfigurationDataForFile() {
     return {
-        'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed for generation
+        'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed
         'MODEL_VERSION': document.getElementById('model-version').value,
         'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
         'ORIGIN_LON': parseFloat(document.getElementById('origin-lng').value),
@@ -23,7 +21,7 @@ function getConfigurationDataForFile() {
     };
 }
 
-// Function to download corner coordinates as a config file
+// Function to download the configuration file
 function downloadConfigFile() {
     const configData = getConfigurationDataForFile();
 
@@ -94,7 +92,6 @@ async function generateModelAndDownload() {
         return; // Stop further execution
     }
 
-
     let remainingSeconds = Math.max(0, Math.round(estimatedSeconds)); // Ensure non-negative integer
 
     // --- Timer Update Function ---
@@ -127,7 +124,7 @@ async function generateModelAndDownload() {
         statusMessage.textContent = 'Generating model... Please wait.';
     }
 
-    // Collect form data for the API request, using UPPERCASE keys as expected by the NZCVM backend
+    // Collect form data for the API request
     const formData = {
         CALL_TYPE: 'GENERATE_VELOCITY_MOD',
         MODEL_VERSION: document.getElementById('model-version').value,
@@ -153,7 +150,7 @@ async function generateModelAndDownload() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(formData), // Send uppercase keys
+            body: JSON.stringify(formData),
         });
 
         if (!response.ok) {
@@ -180,7 +177,7 @@ async function generateModelAndDownload() {
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            // Create a filename based on parameters or a timestamp
+            // Create a filename based on a timestamp
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             a.download = `nzcvm_output_${timestamp}.zip`;
             document.body.appendChild(a);
