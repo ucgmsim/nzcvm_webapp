@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 import zipfile
+import shutil  # Add this import
 from typing import Dict, Tuple, Union
 
 # Import jsonify and abort if not already explicitly imported at the top
@@ -22,6 +23,11 @@ def create_config_file(
 ) -> str:
     """Creates a temporary config file from a dictionary.
     Assumes keys in config_data are already in the correct (uppercase) format.
+
+    Raises
+    ------
+    OSError
+        If there is an issue creating or writing to the config file.
     """
     config_content = [f"{key}={value}" for key, value in config_data.items()]
     config_path = os.path.join(directory, "nzcvm.cfg")
@@ -50,6 +56,15 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
     -------
     bool
         True if the NZCVM process completed successfully, False otherwise.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the NZCVM script or python interpreter is not found.
+    subprocess.CalledProcessError
+        If the NZCVM script returns a non-zero exit code.
+    subprocess.TimeoutExpired
+        If the NZCVM script execution exceeds the timeout.
     """
     # Construct the actual command to run the NZCVM script
     command_args = [
@@ -109,6 +124,15 @@ def zip_output_files(directory_to_zip: str, zip_path: str) -> None:
     Returns
     -------
     None
+
+    Raises
+    ------
+    OSError
+        If there is an issue accessing the directory to zip or writing the zip file.
+    zipfile.BadZipFile
+        If there is an issue with the zip file format during creation (unlikely for 'w' mode).
+    zipfile.LargeZipFile
+        If a file in the directory exceeds ZIP file size limits and allowZip64 is False (default is True).
     """
     print(f"Zipping contents of {directory_to_zip} into {zip_path}")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -136,6 +160,15 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
     Union[Response, Tuple[Response, int]]
         A Flask Response object containing the zip file for download,
         or a JSON error response with an appropriate HTTP status code.
+
+    Raises
+    ------
+    werkzeug.exceptions.HTTPException
+        (Specifically 400 BadRequest) If the request is not JSON or if
+        required configuration fields are missing.
+        Note: Other exceptions from helper functions are caught and typically
+        result in a 500 Internal Server Error response rather than being
+        raised directly from this handler.
     """
     if not request.is_json:
         abort(400, description="Request must be JSON")
@@ -191,6 +224,15 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
                 ),
                 500,
             )
+
+        # Copy the config file to the output directory to be included in the zip
+        try:
+            config_filename = os.path.basename(config_path)
+            dest_config_path = os.path.join(output_dir, config_filename)
+            shutil.copy(config_path, dest_config_path)
+            print(f"Copied config file to {dest_config_path}")
+        except Exception as e:
+            print(f"Error copying config file to output directory: {e}")
 
         # Check if output directory has files before zipping
         if not os.listdir(output_dir):
