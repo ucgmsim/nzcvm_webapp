@@ -1,5 +1,3 @@
-// filepath: /home/arr65/src/nzcvm_webapp/js/formHandler.js
-
 // Function to update the displayed grid point calculations
 function updateGridPointDisplay() {
     const extentX = parseFloat(document.getElementById('extent-x').value);
@@ -30,11 +28,11 @@ function updateFormValues() {
     if (!rectangle) return; // Ensure rectangle exists
 
     const bounds = rectangle.getBounds();
-    const center = bounds.getCenter(); // Use center as origin for simplicity here
+    const center = bounds.getCenter(); // Use center as origin
     const originLat = center.lat;
     const originLng = center.lng;
 
-    // Calculate width and height in KM using map.distance for accuracy
+    // Calculate width and height in KM using map.distance
     const southWest = bounds.getSouthWest();
     const northEast = bounds.getNorthEast();
     const northWest = bounds.getNorthWest(); // Use NW for height calculation start
@@ -91,10 +89,8 @@ function updateRectangleFromForm() {
         // Update grid point display as extents might have changed
         updateGridPointDisplay();
     } else {
-        // Handle invalid input if necessary, e.g., show a message or revert
+        // Invalid input warning
         console.warn("Invalid input detected in form. Rectangle not updated.");
-        // Optionally, if rotation parsing failed but others are okay, maybe just update bounds?
-        // Or provide feedback to the user about the invalid rotation input.
     }
 }
 
@@ -113,9 +109,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initial calculation and display of grid points based on defaults
     updateGridPointDisplay();
 });
-
-// Remove form submission handler for the now-deleted Apply button
-// document.getElementById('apply-btn').addEventListener('click', function () { ... });
 
 // Add event listeners to relevant input fields to update grid points on change
 const gridPointInputs = [
