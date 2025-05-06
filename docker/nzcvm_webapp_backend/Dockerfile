@@ -34,10 +34,8 @@ ENV FLASK_APP=app.py
 # Run app.py when the container launches using Gunicorn
 # Gunicorn is a Python WSGI HTTP server for UNIX. It serves the Flask app in production.
 # --bind 0.0.0.0:5000: Listen on all network interfaces within the container on port 5000
-# --workers 3: Number of worker processes. Each worker handles requests independently so 
-# using 3 workers will allow the app to generate 3 different veloctity models simultaneously.
+# --workers 3: Number of worker processes. Each worker handles requests independently so
+# using 3 workers will allow the app to generate 3 different velocity models simultaneously.
+# --timeout 600: Set worker timeout to 600 seconds (10 minutes)
 # app:app: Look for the Flask app instance named 'app' in the 'app.py' module
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "app:app"]
-
-# Keep the container running indefinitely for debugging/exec purposes
-#CMD ["tail", "-f", "/dev/null"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "600", "app:app"]

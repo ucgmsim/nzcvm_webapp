@@ -86,11 +86,12 @@ async function generateModelAndDownload() {
         if (remainingSeconds >= 0) {
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = remainingSeconds % 60;
-            statusMessage.textContent = `Generating model... Estimated time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            statusMessage.textContent = `Generating model. Estimated time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            statusMessage.style.color = 'chocolate';
         } else {
             // Timer has run out
-            statusMessage.textContent = 'Generation taking longer than expected... Please wait.';
-            statusMessage.style.color = 'darkorange'; // Indicate it's taking longer
+            statusMessage.textContent = 'Generation taking longer than expected. Please wait.';
+            statusMessage.style.color = 'chocolate';
             if (countdownIntervalId) {
                 clearInterval(countdownIntervalId); // Stop the interval
                 countdownIntervalId = null;

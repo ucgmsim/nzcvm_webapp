@@ -10,7 +10,7 @@ function updateGridPointDisplay() {
     const extentZSpacing = parseFloat(document.getElementById('z-spacing').value);
 
     const gridData = calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing);
-    const approxRunTime = calculateApproxRunTime(gridData.totalGridPoints); // Calculate runtime
+    const approxRunTimeMin = calculateApproxRunTime(gridData.totalGridPoints) / 60.0;
 
     // Use Number.toLocaleString() for better readability of large numbers
     const formatNumber = (num) => isNaN(num) ? '---' : num.toLocaleString();
@@ -21,7 +21,7 @@ function updateGridPointDisplay() {
     document.querySelector('#grid-ny-display span').textContent = formatNumber(gridData.ny);
     document.querySelector('#grid-nz-display span').textContent = formatNumber(gridData.nz);
     document.querySelector('#grid-total-display span').textContent = formatNumber(gridData.totalGridPoints);
-    document.querySelector('#grid-runtime-display span').textContent = formatTime(approxRunTime);
+    document.querySelector('#grid-runtime-display span').textContent = formatTime(approxRunTimeMin);
 }
 
 
