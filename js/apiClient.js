@@ -79,6 +79,22 @@ async function generateModelAndDownload() {
         estimatedSeconds = 0; // Default or skip timer on calculation error
     }
 
+    // --- Check if estimated runtime exceeds the limit ---
+    if (estimatedSeconds >= 600) {
+        statusMessage.innerHTML = 'This website can only generate models that require less than 10 min. Please reduce the number of points in your grid until the run time is less than 10 minutes, or <a href="#" id="download-config-link-for-large-model">download the configuration file</a> and generate the model on your computer.';
+        statusMessage.style.color = 'red';
+        // Add event listener for the new download link
+        const downloadLink = document.getElementById('download-config-link-for-large-model');
+        if (downloadLink) {
+            downloadLink.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                downloadConfigFile(); // Call the existing download function
+            });
+        }
+        return; // Stop further execution
+    }
+
+
     let remainingSeconds = Math.max(0, Math.round(estimatedSeconds)); // Ensure non-negative integer
 
     // --- Timer Update Function ---
