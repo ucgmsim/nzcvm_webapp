@@ -13,6 +13,38 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Add auto-graticule
 new AutoGraticule().addTo(map);
 
+// Custom Control to display mouse coordinates
+const CoordinatesControl = L.Control.extend({
+    onAdd: function (map) {
+        this._div = L.DomUtil.create('div', 'leaflet-control-coordinates'); // Create a div with a class for styling
+        this._div.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+        this._div.style.padding = '2px 5px';
+        this._div.style.borderRadius = '3px';
+        this.updateText('Lat: -, Lng: -');
+        return this._div;
+    },
+
+    updateText: function (text) {
+        this._div.innerHTML = text;
+    }
+});
+
+const coordinatesControl = new CoordinatesControl({ position: 'bottomleft' });
+map.addControl(coordinatesControl);
+
+// Update coordinates on mousemove
+map.on('mousemove', function (e) {
+    const lat = e.latlng.lat.toFixed(4);
+    const lng = e.latlng.lng.toFixed(4);
+    coordinatesControl.updateText(`Lat: ${lat}, Lng: ${lng}`);
+});
+
+// Clear coordinates when mouse leaves the map
+map.on('mouseout', function () {
+    coordinatesControl.updateText('Lat: -, Lng: -');
+});
+
+
 // Define initial parameters for the rectangle (used by rectangleControls)
 export const initialOriginLat = -41.2865;
 window.initialOriginLat = initialOriginLat; // Make global

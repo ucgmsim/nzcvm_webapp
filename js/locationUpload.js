@@ -198,7 +198,7 @@ function createLocationUploadControls() {
     // Apply styles for bottom-right positioning
     controlPanel.style.position = 'absolute';
     controlPanel.style.top = 'auto'; // Ensure top is not fixed, allowing content to define height from bottom
-    controlPanel.style.bottom = '10px';
+    controlPanel.style.bottom = '25px';
     controlPanel.style.right = '10px';
     controlPanel.style.zIndex = '1000'; // Ensure it's above map tiles but potentially below other map controls if needed
     controlPanel.style.padding = '10px';
