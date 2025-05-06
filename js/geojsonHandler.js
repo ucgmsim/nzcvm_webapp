@@ -1,4 +1,4 @@
-// filepath: /home/arr65/src/nzcvm_webapp/js/geojsonHandler.js
+// Functions to handle GeoJSON loading and display on the map
 
 // Variables for GeoJSON overlay
 let currentGeoJSONLayer = null;
@@ -120,35 +120,7 @@ function loadGeoJSONByModelVersion(modelVersion) {
             if (loadingIndicator) {
                 loadingIndicator.remove();
             }
-
-            // Create a more detailed error message
-            const detailedAlert = document.createElement('div');
-            detailedAlert.id = 'error-message';
-            detailedAlert.style.position = 'absolute';
-            detailedAlert.style.top = '50%';
-            detailedAlert.style.left = '50%';
-            detailedAlert.style.transform = 'translate(-50%, -50%)';
-            detailedAlert.style.background = 'white';
-            detailedAlert.style.padding = '15px';
-            detailedAlert.style.borderRadius = '5px';
-            detailedAlert.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-            detailedAlert.style.zIndex = '1000';
-            detailedAlert.style.maxWidth = '80%';
-            detailedAlert.style.textAlign = 'left';
-            detailedAlert.innerHTML = `
-                <h3 style="color: red; margin-top: 0;">Error Loading GeoJSON</h3>
-                <p><strong>File:</strong> ${filename}</p>
-                <p><strong>URL:</strong> ${geoJsonUrl}</p>
-                <p><strong>Error:</strong> ${errorMsg}</p>
-                <p>Please check the console for more details.</p>
-                <button id="close-error" style="padding: 5px 10px; float: right;">Close</button>
-            `;
-            document.getElementById('map-container').appendChild(detailedAlert);
-
-            // Add event listener to close button
-            document.getElementById('close-error').addEventListener('click', function () {
-                document.getElementById('error-message').remove();
-            });
+            alert(`Error loading GeoJSON: ${errorMsg}. Check console for details.`);
         });
 }
 

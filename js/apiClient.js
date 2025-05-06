@@ -1,3 +1,5 @@
+// Functions to handle API requests and file downloads
+
 // Global variable to hold the timer interval ID
 let countdownIntervalId = null;
 

@@ -1,3 +1,5 @@
+// Functions to handle the input form
+
 // Function to update the displayed grid point calculations
 function updateGridPointDisplay() {
     const extentX = parseFloat(document.getElementById('extent-x').value);
