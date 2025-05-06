@@ -153,12 +153,12 @@ function loadGeoJSONByModelVersion(modelVersion) {
 }
 
 // Add change event listener for model version selection
-// document.getElementById('model-version').addEventListener('change', function () {
-//    loadGeoJSONByModelVersion(this.value);
-//});
+document.getElementById('model-version').addEventListener('change', function () {
+    loadGeoJSONByModelVersion(this.value);
+});
 
 // Load initial GeoJSON based on default selected model version
-// document.addEventListener('DOMContentLoaded', function () {
-//     const initialModelVersion = document.getElementById('model-version').value;
-//     loadGeoJSONByModelVersion(initialModelVersion);
-// });
+document.addEventListener('DOMContentLoaded', function () {
+    const initialModelVersion = document.getElementById('model-version').value;
+    loadGeoJSONByModelVersion(initialModelVersion);
+});

@@ -195,9 +195,10 @@ document.addEventListener('DOMContentLoaded', function () {
 function createLocationUploadControls() {
     const controlPanel = document.createElement('div');
     controlPanel.id = 'location-upload-panel';
-    // Apply styles for top-right positioning
+    // Apply styles for bottom-right positioning
     controlPanel.style.position = 'absolute';
-    controlPanel.style.top = '10px';
+    controlPanel.style.top = 'auto'; // Ensure top is not fixed, allowing content to define height from bottom
+    controlPanel.style.bottom = '10px';
     controlPanel.style.right = '10px';
     controlPanel.style.zIndex = '1000'; // Ensure it's above map tiles but potentially below other map controls if needed
     controlPanel.style.padding = '10px';
@@ -205,7 +206,6 @@ function createLocationUploadControls() {
     controlPanel.style.border = '1px solid #ccc';
     controlPanel.style.borderRadius = '5px';
     controlPanel.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)'; // Add shadow for better visibility
-    // controlPanel.style.marginTop = '10px'; // Remove margin if using absolute positioning
 
     controlPanel.innerHTML = `
         <div style="margin-bottom: 8px; font-weight: bold;">Upload Locations</div>
