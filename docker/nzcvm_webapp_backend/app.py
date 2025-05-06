@@ -2,10 +2,8 @@ import os
 import subprocess
 import tempfile
 import zipfile
-import shutil  # Add this import
 from typing import Dict, Tuple, Union
 
-# Import jsonify and abort if not already explicitly imported at the top
 from flask import Flask, request, send_file, jsonify, abort, Response
 
 app = Flask(__name__)
@@ -23,6 +21,15 @@ def create_config_file(
 ) -> str:
     """Creates a temporary config file from a dictionary.
     Assumes keys in config_data are already in the correct (uppercase) format.
+
+    Parameters
+    ----------
+    config_data : Dict[str, Union[str, float, int]]
+        A dictionary containing configuration key-value pairs.
+        Keys are expected to be uppercase strings representing configuration
+        parameter names, and values can be strings, floats, or integers.
+    directory : str
+        The path to the directory where the configuration file will be created.
 
     Raises
     ------
@@ -48,9 +55,11 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
     Parameters
     ----------
     config_path : str
-        Path to the NZCVM configuration file.
+        Path to the NZCVM configuration file. This file contains the
+        parameters required by the NZCVM script.
     output_dir : str
         Path to the directory where NZCVM output files should be saved.
+        The script will write its generated files into this location.
 
     Returns
     -------
@@ -66,7 +75,7 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
     subprocess.TimeoutExpired
         If the NZCVM script execution exceeds the timeout.
     """
-    # Construct the actual command to run the NZCVM script
+    # Construct the command to run the NZCVM script
     command_args = [
         "python",
         NZCVM_SCRIPT_PATH,
@@ -118,8 +127,11 @@ def zip_output_files(directory_to_zip: str, zip_path: str) -> None:
     ----------
     directory_to_zip : str
         The path to the directory whose contents should be zipped.
+        All files and subdirectories within this directory will be included
+        in the zip archive.
     zip_path : str
-        The desired path for the output zip file.
+        The desired path for the output zip file, including the filename
+        (e.g., '/path/to/archive.zip').
 
     Returns
     -------
@@ -151,9 +163,17 @@ def zip_output_files(directory_to_zip: str, zip_path: str) -> None:
 def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
     """Flask route handler for running the NZCVM process.
 
-    Receives configuration data as JSON, validates it, runs the NZCVM script
-    in a subprocess, zips the output files, and sends the zip file back
-    to the client as an attachment. Handles errors during the process.
+    Receives configuration data as JSON from a POST request. It validates
+    this data, then uses helper functions to create a configuration file,
+    run the NZCVM script as a subprocess, and zip the resulting output files.
+    Finally, it sends this zip file back to the client as a downloadable
+    attachment. If any step fails, it returns a JSON error response with an
+    appropriate HTTP status code.
+
+    The request body must be a JSON object containing the necessary
+    configuration parameters for the NZCVM script. Refer to the
+    `required_fields` list within the function for details on mandatory
+    parameters.
 
     Returns
     -------
@@ -177,7 +197,7 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
     print("Received config data:", config_data)
 
     # Ensure all fields required by the nzcvm.py script are present
-    # Use UPPERCASE keys to match what apiClient.js now sends
+    # Use UPPERCASE keys for consistency with the NZCVM script
     required_fields = [
         "CALL_TYPE",
         "MODEL_VERSION",
@@ -189,12 +209,12 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
         "EXTENT_ZMAX",
         "EXTENT_ZMIN",
         "EXTENT_Z_SPACING",
-        "EXTENT_LATLON_SPACING",  # Key expected by nzcvm.py config
+        "EXTENT_LATLON_SPACING",
         "MIN_VS",
         "TOPO_TYPE",
         "OUTPUT_DIR",
     ]
-    # Check for missing fields using UPPERCASE keys from the received JSON
+    # Check for missing fields
     missing_fields = [field for field in required_fields if field not in config_data]
     if missing_fields:
         abort(
@@ -209,7 +229,6 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
         os.makedirs(output_dir, exist_ok=True)  # Ensure output dir exists
 
         # Create the config file within the temp directory
-        # Pass the original config_data (now with uppercase keys)
         config_path = create_config_file(config_data, temp_dir)
 
         print(
@@ -225,16 +244,7 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
                 500,
             )
 
-        # Copy the config file to the output directory to be included in the zip
-        try:
-            config_filename = os.path.basename(config_path)
-            dest_config_path = os.path.join(output_dir, config_filename)
-            shutil.copy(config_path, dest_config_path)
-            print(f"Copied config file to {dest_config_path}")
-        except Exception as e:
-            print(f"Error copying config file to output directory: {e}")
-
-        # Check if output directory has files before zipping
+        # Check if the output directory has files before zipping
         if not os.listdir(output_dir):
             print(
                 f"Warning: Output directory '{output_dir}' is empty after process execution."
@@ -245,6 +255,10 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
                 ),
                 500,
             )
+
+        # Create a copy of the config file the in the output directory so it is
+        # included in the zip file for download
+        _ = create_config_file(config_data, output_dir)
 
         # Create zip file path within the temp directory
         zip_filename = "nzcvm_output.zip"
@@ -257,6 +271,7 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
             return jsonify({"error": f"Failed to zip output files: {e}"}), 500
 
         print(f"Sending zip file: {zip_path}")
+
         # Send the zip file back to the client
         return send_file(
             zip_path,
