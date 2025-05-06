@@ -5,12 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NZCVM web app</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> <!-- Add Leaflet CSS back -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.2/papaparse.min.js"></script>
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 
 <body>
+    <script type="importmap">
+        {
+            "imports": {
+                "leaflet": "https://esm.sh/leaflet",
+                "leaflet-auto-graticule": "https://esm.sh/leaflet-auto-graticule"
+            }
+        }
+    </script>
+
     <div id="map-container">
         <div id="map"></div>
         <div class="use-instructions">
@@ -110,14 +119,14 @@
         <div id="status-message" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/mapSetup.js"></script>
-    <script src="js/rectangleControls.js"></script>
-    <script src="js/formHandler.js"></script>
-    <script src="js/geojsonHandler.js"></script>
-    <script src="js/locationUpload.js"></script>
-    <script src="js/apiClient.js"></script>
+    <!-- No longer needed: <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> -->
+    <script src="js/utils.js" defer></script>
+    <script type="module" src="js/mapSetup.js"></script> <!-- Modules are deferred by default -->
+    <script src="js/rectangleControls.js" defer></script>
+    <script src="js/formHandler.js" defer></script>
+    <script src="js/geojsonHandler.js" defer></script>
+    <script src="js/locationUpload.js" defer></script>
+    <script src="js/apiClient.js" defer></script>
 </body>
 
 </html>
