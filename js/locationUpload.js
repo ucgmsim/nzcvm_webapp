@@ -117,7 +117,6 @@ function parseLocationFile(isLLFile, fileContent) {
 // Function to display location markers on the map with optimizations for large datasets
 function displayLocationMarkers(locations) {
     // Don't proceed if no locations
-    console.log(locations)
     if (!locations || locations.length === 0) {
         console.log("No locations to display.");
         return;
