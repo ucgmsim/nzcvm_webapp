@@ -68,28 +68,17 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
     Exception
         Catches exceptions from `generate_velocity_model` and logs them.
     """
-    print(
-        f"Running NZCVM process directly. Config: {config_path}, Output directory: {output_dir}"
-    )
+
     try:
-        # Call the generate_velocity_model function directly
-        # Default values for nzcvm_registry, model_version (read from cfg),
-        # data_root, smoothing, log_level will be used from generate_velocity_model
         generate_velocity_model(
             nzcvm_cfg_path=config_path,
             out_dir=output_dir,
             output_format="HDF5",
-            # log_level can be set here if needed, e.g., log_level="INFO"
-            # model_version can be passed if we want to override config, but typically read from config
         )
         print("NZCVM process completed successfully via direct call.")
         return True
     except Exception as e:
-        # Catching a broad exception class as generate_velocity_model can raise various errors
-        # (ValueError, OSError, RuntimeError, etc.)
-        # Specific subprocess exceptions are no longer relevant.
         print(f"NZCVM process failed during direct call: {e}")
-        # For more detailed debugging, you might want to print the full traceback
         import traceback
 
         print(traceback.format_exc())
@@ -142,7 +131,7 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
 
     Receives configuration data as JSON from a POST request. It validates
     this data, then uses helper functions to create a configuration file,
-    run the NZCVM script as a subprocess, and zip the resulting output files.
+    generates the velocity model, and zips the resulting output files.
     Finally, it sends this zip file back to the client as a downloadable
     attachment. If any step fails, it returns a JSON error response with an
     appropriate HTTP status code.
