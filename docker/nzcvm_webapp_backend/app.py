@@ -1,8 +1,8 @@
-import os
 import subprocess
 import tempfile
 import zipfile
 from typing import Dict, Tuple, Union
+from pathlib import Path
 
 from flask import Flask, request, send_file, jsonify, abort, Response
 
@@ -17,8 +17,8 @@ NZCVM_SCRIPT_PATH = (
 
 # --- Helper Functions ---
 def create_config_file(
-    config_data: Dict[str, Union[str, float, int]], directory: str
-) -> str:
+    config_data: Dict[str, Union[str, float, int]], directory: Union[str, Path]
+) -> Path:
     """Creates a temporary config file from a dictionary.
     Assumes keys in config_data are already in the correct (uppercase) format.
 
@@ -28,7 +28,7 @@ def create_config_file(
         A dictionary containing configuration key-value pairs.
         Keys are expected to be uppercase strings representing configuration
         parameter names, and values can be strings, floats, or integers.
-    directory : str
+    directory : Union[str, Path]
         The path to the directory where the configuration file will be created.
 
     Raises
@@ -37,7 +37,7 @@ def create_config_file(
         If there is an issue creating or writing to the config file.
     """
     config_content = [f"{key}={value}" for key, value in config_data.items()]
-    config_path = os.path.join(directory, "nzcvm.cfg")
+    config_path = Path(directory) / "nzcvm.cfg"
     with open(config_path, "w") as f:
         f.write("\n".join(config_content))
     print(f"Generated config file at: {config_path}")
@@ -46,7 +46,7 @@ def create_config_file(
     return config_path
 
 
-def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
+def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
     """Runs the NZCVM command using subprocess.
 
     Executes the NZCVM script to generate the velocity model based on
@@ -54,10 +54,10 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
 
     Parameters
     ----------
-    config_path : str
+    config_path : Path
         Path to the NZCVM configuration file. This file contains the
         parameters required by the NZCVM script.
-    output_dir : str
+    output_dir : Path
         Path to the directory where NZCVM output files should be saved.
         The script will write its generated files into this location.
 
@@ -80,9 +80,9 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
         "python",
         NZCVM_SCRIPT_PATH,
         "generate-velocity-model",
-        config_path,
+        str(config_path),
         "--out-dir",
-        output_dir,
+        str(output_dir),
         "--output-format",
         "HDF5",
     ]
@@ -118,18 +118,18 @@ def run_nzcvm_process(config_path: str, output_dir: str) -> bool:
         return False
 
 
-def zip_output_files(directory_to_zip: str, zip_path: str) -> None:
+def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
     """Zips the contents of the specified directory.
 
     Creates a zip archive containing all files within the given directory.
 
     Parameters
     ----------
-    directory_to_zip : str
+    directory_to_zip : Path
         The path to the directory whose contents should be zipped.
         All files and subdirectories within this directory will be included
         in the zip archive.
-    zip_path : str
+    zip_path : Path
         The desired path for the output zip file, including the filename
         (e.g., '/path/to/archive.zip').
 
@@ -148,11 +148,10 @@ def zip_output_files(directory_to_zip: str, zip_path: str) -> None:
     """
     print(f"Zipping contents of {directory_to_zip} into {zip_path}")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(directory_to_zip):
-            for file in files:
-                file_path = os.path.join(root, file)
+        for file_path in directory_to_zip.rglob("*"):
+            if file_path.is_file():
                 # archive_name is the name inside the zip file
-                archive_name = os.path.relpath(file_path, directory_to_zip)
+                archive_name = file_path.relative_to(directory_to_zip)
                 print(f"Adding {file_path} as {archive_name}")
                 zipf.write(file_path, arcname=archive_name)
     print("Zipping complete.")
@@ -223,10 +222,11 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
         )
 
     # Use temporary directories for isolation and easy cleanup
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory() as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
         # Put the output directory inside the temp directory of the container
-        output_dir = os.path.join(temp_dir, "nzcvm_output")
-        os.makedirs(output_dir, exist_ok=True)  # Ensure output dir exists
+        output_dir = temp_dir / "nzcvm_output"
+        output_dir.mkdir(parents=True, exist_ok=True)  # Ensure output dir exists
 
         # Create the config file within the temp directory
         config_path = create_config_file(config_data, temp_dir)
@@ -245,7 +245,7 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
             )
 
         # Check if the output directory has files before zipping
-        if not os.listdir(output_dir):
+        if not any(output_dir.iterdir()):
             print(
                 f"Warning: Output directory '{output_dir}' is empty after process execution."
             )
@@ -262,7 +262,7 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
 
         # Create zip file path within the temp directory
         zip_filename = "nzcvm_output.zip"
-        zip_path = os.path.join(temp_dir, zip_filename)
+        zip_path = temp_dir / zip_filename
 
         try:
             zip_output_files(output_dir, zip_path)
