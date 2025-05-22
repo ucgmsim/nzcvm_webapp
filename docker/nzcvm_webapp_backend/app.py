@@ -1,6 +1,5 @@
 import tempfile
 import zipfile
-from typing import Dict, Tuple, Union
 from pathlib import Path
 
 from flask import Flask, request, send_file, jsonify, abort, Response
