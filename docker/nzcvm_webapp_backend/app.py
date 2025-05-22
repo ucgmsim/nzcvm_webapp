@@ -14,18 +14,18 @@ app = Flask(__name__)
 
 # --- Helper Functions ---
 def create_config_file(
-    config_data: Dict[str, Union[str, float, int]], directory: Union[str, Path]
+    config_data: dict[str, str | float | int], directory: str | Path
 ) -> Path:
     """Creates a temporary config file from a dictionary.
     Assumes keys in config_data are already in the correct (uppercase) format.
 
     Parameters
     ----------
-    config_data : Dict[str, Union[str, float, int]]
+    config_data : dict[str, str | float | int]
         A dictionary containing configuration key-value pairs.
         Keys are expected to be uppercase strings representing configuration
         parameter names, and values can be strings, floats, or integers.
-    directory : Union[str, Path]
+    directory : str | Path
         The path to the directory where the configuration file will be created.
 
     Raises
