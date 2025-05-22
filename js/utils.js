@@ -100,7 +100,9 @@ function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, 
 
 /**
  * Calculate the estimated run time based on the total number of grid points.
- * The parameters in the formula are derived from test runs.
+ * The parameters in this approximation formula were derived by fitting a linear
+ * model to the run times as a function of the total number of grid points 
+ * for several test runs on Mantle.
  *
  * @param {number} totalGridPoints - The total number of grid points (nx * ny * nz).
  * @returns {number} The estimated run time in seconds. Returns NaN if input is invalid.
@@ -109,6 +111,8 @@ function calculateApproxRunTime(totalGridPoints) {
     if (isNaN(totalGridPoints) || totalGridPoints <= 0) {
         return NaN; // Return NaN for invalid input
     }
-    // Formula: 33 + totalGridPoints * 2.6014383829e-5
+    // The parameters in this approximation formula were derived by fitting a linear
+    // model to the run times as a function of the total number of grid points 
+    // for several test runs on Mantle.
     return 33 + totalGridPoints * 2.6014383829e-5;
 }
