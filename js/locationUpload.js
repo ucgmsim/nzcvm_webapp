@@ -51,13 +51,13 @@ function parseLocationFile(isLLFile, fileContent) {
             if (parts.length < 2) {
                 throw new Error(`Invalid format in .ll file on line ${index + 1}`);
             }
-            const lng = parseFloat(parts[0]);
+            const lon = parseFloat(parts[0]);
             const lat = parseFloat(parts[1]);
             const name = parts[2] || `Location ${index + 1}`;
-            if (isNaN(lng) || isNaN(lat)) {
+            if (isNaN(lon) || isNaN(lat)) {
                 throw new Error(`Invalid coordinates in .ll file on line ${index + 1}`);
             }
-            return { lng, lat, name };
+            return { lon, lat, name };
         });
     } else {
         // Use PapaParse for CSV
@@ -76,36 +76,50 @@ function parseLocationFile(isLLFile, fileContent) {
         locations = locations_results.data;
 
         if (!fileHasHeaders) {
-            // Assume order is lng, lat, name if no headers
+            // Assume order is lon, lat, name if no headers
             locations = locations.map((row, index) => {
                 if (!Array.isArray(row) || row.length < 2) {
                     throw new Error(`Invalid data format in CSV row ${index + 1}`);
                 }
-                const lng = parseFloat(row[0]);
+                const lon = parseFloat(row[0]);
                 const lat = parseFloat(row[1]);
                 const name = row[2] || `Location ${index + 1}`;
-                if (isNaN(lng) || isNaN(lat)) {
+                if (isNaN(lon) || isNaN(lat)) {
                     throw new Error(`Invalid coordinates in CSV row ${index + 1}`);
                 }
-                return { lng, lat, name };
+                return { lon, lat, name };
             });
         } else {
-            // Validate required headers (lng, lat)
-            const requiredHeaders = ['lng', 'lat'];
+            // Validate required headers (lon, lat)
+            const requiredHeaders = ['lon', 'lat'];
             const actualHeaders = Object.keys(locations[0] || {});
             for (const header of requiredHeaders) {
                 if (!actualHeaders.includes(header)) {
-                    throw new Error(`Missing required header in CSV: '${header}'`);
+                    // Attempt to find 'lng' if 'lon' is missing for backward compatibility or common variations
+                    if (header === 'lon' && actualHeaders.includes('lng')) {
+                        // If 'lng' is found, we'll use it but map to 'lon'
+                        console.warn("CSV header 'lon' not found, using 'lng' instead.");
+                    } else {
+                        throw new Error(`Missing required header in CSV: '${header}'`);
+                    }
                 }
             }
             // Ensure coordinates are numbers
             locations = locations.map((row, index) => {
-                const lng = parseFloat(row.lng);
-                const lat = parseFloat(row.lat);
-                if (isNaN(lng) || isNaN(lat)) {
-                    throw new Error(`Invalid coordinates in CSV row ${index + 1}`);
+                // Prefer 'lon', but fall back to 'lng' if 'lon' is not present or not a number
+                let lon = parseFloat(row.lon);
+                if (isNaN(lon) && row.hasOwnProperty('lng')) {
+                    lon = parseFloat(row.lng);
                 }
-                return { ...row, lng, lat }; // Keep other columns if present
+                const lat = parseFloat(row.lat);
+
+                if (isNaN(lon) || isNaN(lat)) {
+                    throw new Error(`Invalid coordinates in CSV row ${index + 1} (expected 'lon' or 'lng', and 'lat' headers).`);
+                }
+                // Create a new object ensuring 'lon' is used, and remove 'lng' if it exists
+                const newRow = { ...row, lon, lat };
+                delete newRow.lng;
+                return newRow;
             });
         }
     }
@@ -128,11 +142,11 @@ function displayLocationMarkers(locations) {
     let bounds = L.latLngBounds();
 
     for (const loc of locations) {
-        if (typeof loc.lat !== 'number' || typeof loc.lng !== 'number' || isNaN(loc.lat) || isNaN(loc.lng)) {
+        if (typeof loc.lat !== 'number' || typeof loc.lon !== 'number' || isNaN(loc.lat) || isNaN(loc.lon)) {
             console.warn("Skipping invalid location:", loc);
             continue;
         }
-        const latLng = L.latLng(loc.lat, loc.lng);
+        const latLng = L.latLng(loc.lat, loc.lon); // L.latLng expects (lat, lng)
         const marker = L.circleMarker(latLng, {
             radius: 4,
             fillColor: '#3388ff',
@@ -140,8 +154,8 @@ function displayLocationMarkers(locations) {
             weight: 1,
             opacity: 1,
             fillOpacity: 0.8,
-            title: loc.name || `Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}` // Added title property
-        }).bindPopup(loc.name || `Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}`);
+            title: loc.name || `Lat: ${loc.lat.toFixed(4)}, Lon: ${loc.lon.toFixed(4)}` // Added title property
+        }).bindPopup(loc.name || `Lat: ${loc.lat.toFixed(4)}, Lon: ${loc.lon.toFixed(4)}`);
 
         locationMarkersLayer.addLayer(marker);
         locationMarkers.push(marker); // Keep track if needed, though layer group handles removal
@@ -206,7 +220,7 @@ function createLocationUploadControls() {
 
     controlPanel.innerHTML = `
         <div style="margin-bottom: 8px; font-weight: bold;">Upload Locations</div>
-        <div style="margin-bottom: 8px; font-size: 0.9em;">(.csv: lng,lat,[name] or .ll: lng lat [name])</div>
+        <div style="margin-bottom: 8px; font-size: 0.9em;">(.csv: lon,lat,[name] or .ll: lon lat [name])</div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
             <input type="file" id="location-file-input" accept=".csv,.ll" style="padding: 5px;" />
             <div style="display: flex; align-items: center; gap: 5px;">

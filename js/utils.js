@@ -10,36 +10,36 @@ function kmToDegrees(km, centerLat) {
 
     // Longitude depends on the latitude due to the Earth's curvature
     const latRadians = centerLat * (Math.PI / 180);
-    const lngDegrees = km / (111.32 * Math.cos(latRadians));
+    const lonDegrees = km / (111.32 * Math.cos(latRadians));
 
-    return { lat: latDegrees, lng: lngDegrees };
+    return { lat: latDegrees, lon: lonDegrees };
 }
 
 // Function to convert degrees to kilometers
-function degreesToKm(lat, lng, centerLat) {
+function degreesToKm(lat, lon, centerLat) {
     const latKm = lat * 111.32; // 1 degree latitude is approximately 111.32 km
 
     const latRadians = centerLat * (Math.PI / 180);
-    const lngKm = lng * (111.32 * Math.cos(latRadians));
+    const lonKm = lon * (111.32 * Math.cos(latRadians));
 
-    return { latKm, lngKm };
+    return { latKm, lonKm };
 }
 
 // Function to calculate rectangle bounds from origin and extents
-function calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, extentY) {
+function calculateBoundsFromOriginAndExtents(originLat, originLon, extentX, extentY) {
     // Convert extents from kilometers to degrees
     const extentsDegrees = kmToDegrees(extentX / 2, originLat);
     const extentsDegreesY = kmToDegrees(extentY / 2, originLat);
 
     // Calculate southwest and northeast corners
     const swLat = originLat - extentsDegreesY.lat;
-    const swLng = originLng - extentsDegrees.lng;
+    const swLon = originLon - extentsDegrees.lon;
     const neLat = originLat + extentsDegreesY.lat;
-    const neLng = originLng + extentsDegrees.lng;
+    const neLon = originLon + extentsDegrees.lon;
 
     return [
-        [swLat, swLng], // Southwest corner
-        [neLat, neLng]  // Northeast corner
+        [swLat, swLon], // Southwest corner
+        [neLat, neLon]  // Northeast corner
     ];
 }
 
@@ -49,16 +49,16 @@ function calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, exte
  * The vectors are (p1 - center) and (p2 - center).
  * The angle is measured from the vector (center to p1) to the vector (center to p2).
  *
- * @param {{lat: number, lng: number}} center - The common point (vertex) of the two vectors.
- * @param {{lat: number, lng: number}} p1 - The end point of the first vector.
- * @param {{lat: number, lng: number}} p2 - The end point of the second vector.
+ * @param {{lat: number, lon: number}} center - The common point (vertex) of the two vectors.
+ * @param {{lat: number, lon: number}} p1 - The end point of the first vector.
+ * @param {{lat: number, lon: number}} p2 - The end point of the second vector.
  * @returns {number} The angle in degrees. Positive values indicate a counter-clockwise
  *                   angle from vector (center-p1) to vector (center-p2).
  */
 // Calculate angle between three points (used for rotation)
 function calculateAngle(center, p1, p2) {
-    const angle1 = Math.atan2(p1.lat - center.lat, p1.lng - center.lng);
-    const angle2 = Math.atan2(p2.lat - center.lat, p2.lng - center.lng);
+    const angle1 = Math.atan2(p1.lat - center.lat, p1.lon - center.lon);
+    const angle2 = Math.atan2(p2.lat - center.lat, p2.lon - center.lon);
     return ((angle2 - angle1) * 180 / Math.PI);
 }
 

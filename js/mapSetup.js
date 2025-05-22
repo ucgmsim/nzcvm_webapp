@@ -24,7 +24,7 @@ const CoordinatesControl = L.Control.extend({
         this._div.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
         this._div.style.padding = '2px 5px';
         this._div.style.borderRadius = '3px';
-        this.updateText('Lat: -, Lng: -');
+        this.updateText('Lat: -, Lon: -');
         return this._div;
     },
 
@@ -39,13 +39,13 @@ map.addControl(coordinatesControl);
 // Update coordinates on mousemove
 map.on('mousemove', function (e) {
     const lat = e.latlng.lat.toFixed(4);
-    const lng = e.latlng.lng.toFixed(4);
-    coordinatesControl.updateText(`Lat: ${lat}, Lng: ${lng}`);
+    const lon = e.latlng.lng.toFixed(4); // e.latlng.lng is from Leaflet
+    coordinatesControl.updateText(`Lat: ${lat}, Lon: ${lon}`);
 });
 
 // Clear coordinates when mouse leaves the map
 map.on('mouseout', function () {
-    coordinatesControl.updateText('Lat: -, Lng: -');
+    coordinatesControl.updateText('Lat: -, Lon: -');
 });
 
 
@@ -53,8 +53,8 @@ map.on('mouseout', function () {
 export const initialOriginLat = -41.2865;
 window.initialOriginLat = initialOriginLat; // Make global
 
-export const initialOriginLng = 174.7762;
-window.initialOriginLng = initialOriginLng; // Make global
+export const initialOriginLon = 174.7762;
+window.initialOriginLon = initialOriginLon; // Make global
 
 export const initialExtentX = 300; // width in km
 window.initialExtentX = initialExtentX; // Make global

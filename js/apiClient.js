@@ -9,7 +9,7 @@ function getConfigurationDataForFile() {
         'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed
         'MODEL_VERSION': document.getElementById('model-version').value,
         'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
-        'ORIGIN_LON': parseFloat(document.getElementById('origin-lng').value),
+        'ORIGIN_LON': parseFloat(document.getElementById('origin-lon').value),
         'EXTENT_X': parseFloat(document.getElementById('extent-x').value),
         'EXTENT_Y': parseFloat(document.getElementById('extent-y').value),
         'EXTENT_ZMAX': parseFloat(document.getElementById('extent-zmax').value),
@@ -61,7 +61,7 @@ async function generateModelAndDownload() {
         // Read values needed for calculation (ensure they exist and are valid)
         const extentX = parseFloat(document.getElementById('extent-x').value);
         const extentY = parseFloat(document.getElementById('extent-y').value);
-        const extentLatlonSpacing = parseFloat(document.getElementById('xy-spacing').value);
+        const extentLatlonSpacing = parseFloat(document.getElementById('xy-spacing').value); // Renamed from extentLatLonSpacing for consistency
         const extentZmax = parseFloat(document.getElementById('extent-zmax').value);
         const extentZmin = parseFloat(document.getElementById('extent-zmin').value);
         const extentZSpacing = parseFloat(document.getElementById('z-spacing').value);
@@ -131,7 +131,7 @@ async function generateModelAndDownload() {
         CALL_TYPE: 'GENERATE_VELOCITY_MOD',
         MODEL_VERSION: document.getElementById('model-version').value,
         ORIGIN_LAT: parseFloat(document.getElementById('origin-lat').value),
-        ORIGIN_LON: parseFloat(document.getElementById('origin-lng').value),
+        ORIGIN_LON: parseFloat(document.getElementById('origin-lon').value),
         ORIGIN_ROT: parseFloat(document.getElementById('rotation').value),
         EXTENT_X: parseFloat(document.getElementById('extent-x').value),
         EXTENT_Y: parseFloat(document.getElementById('extent-y').value),

@@ -3,7 +3,7 @@
 // Create a rectangle using initial bounds calculated from mapSetup parameters
 const initialBounds = calculateBoundsFromOriginAndExtents(
     initialOriginLat,
-    initialOriginLng,
+    initialOriginLon,
     initialExtentX,
     initialExtentY
 );
@@ -268,11 +268,16 @@ document.addEventListener('mousemove', function (e) {
     // Convert screen position to map coordinates
     const containerPoint = new L.Point(e.clientX, e.clientY);
     const layerPoint = map.containerPointToLayerPoint(containerPoint);
-    const latlng = map.layerPointToLatLng(layerPoint);
+    const currentLatLng = map.layerPointToLatLng(layerPoint); // Renamed to avoid conflict with calculateAngle's new signature
 
-    if (isRotating && rectangleCenter) {
+    if (isRotating && rectangleCenter && lastPos) { // lastPos is a Leaflet LatLng
         // Calculate rotation angle (note the negative sign)
-        const angleDelta = -calculateAngle(rectangleCenter, lastPos, latlng);
+        // Adapt the call to calculateAngle, as it now expects {lat, lon} objects
+        const angleDelta = -calculateAngle(
+            { lat: rectangleCenter.lat, lon: rectangleCenter.lng },
+            { lat: lastPos.lat, lon: lastPos.lng },
+            { lat: currentLatLng.lat, lon: currentLatLng.lng }
+        );
         // Ensure rotationAngle stays within [0, 360)
         rotationAngle = (((rotationAngle + angleDelta) % 360) + 360) % 360;
 
@@ -280,16 +285,16 @@ document.addEventListener('mousemove', function (e) {
         applyRotation();
     } else if (isDragging) {
         // Calculate the movement delta
-        const latDiff = latlng.lat - lastPos.lat;
-        const lngDiff = latlng.lng - lastPos.lng;
+        const latDiff = currentLatLng.lat - lastPos.lat;
+        const lonDiff = currentLatLng.lng - lastPos.lng; // lastPos is Leaflet LatLng
         const currentBounds = rectangle.getBounds();
         const sw = currentBounds.getSouthWest();
         const ne = currentBounds.getNorthEast();
 
         // Update rectangle position
         rectangle.setBounds([
-            [sw.lat + latDiff, sw.lng + lngDiff],
-            [ne.lat + latDiff, ne.lng + lngDiff],
+            [sw.lat + latDiff, sw.lng + lonDiff], // sw.lng is Leaflet LatLng
+            [ne.lat + latDiff, ne.lng + lonDiff], // ne.lng is Leaflet LatLng
         ]);
 
         // Reapply rotation after moving
@@ -299,9 +304,9 @@ document.addEventListener('mousemove', function (e) {
         updateFormValues();
     } else if (isResizing && rectangleCenter && initialResizeHandlePos && initialRectBounds) {
         // Get current mouse position and initial handle position in screen coordinates
-        const currentMousePoint = map.latLngToContainerPoint(latlng);
-        const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
-        const centerPoint = map.latLngToContainerPoint(rectangleCenter);
+        const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
+        const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos); // initialResizeHandlePos is Leaflet LatLng
+        const centerPoint = map.latLngToContainerPoint(rectangleCenter); // rectangleCenter is Leaflet LatLng
 
         // Calculate rotation vectors once (optimization)
         const angle = rotationAngle * Math.PI / 180;
@@ -330,21 +335,21 @@ document.addEventListener('mousemove', function (e) {
         let scaleY = Math.max((initialHeight + projectionOnHeight) / initialHeight || 1, minScale);
 
         // Calculate new bounds
-        const center = initialRectBounds.getCenter();
-        const width = Math.abs(origNE.lng - origSW.lng) * scaleX;
+        const center = initialRectBounds.getCenter(); // Leaflet LatLng
+        const width = Math.abs(origNE.lng - origSW.lng) * scaleX; // .lng from Leaflet LatLng
         const height = Math.abs(origNE.lat - origSW.lat) * scaleY;
-        const halfWidthLng = width / 2;
+        const halfWidthLon = width / 2;
         const halfHeightLat = height / 2;
 
         const newBounds = L.latLngBounds(
-            L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLng),
-            L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLng)
+            L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLon), // center.lng from Leaflet
+            L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLon)  // center.lng from Leaflet
         );
         rectangle.setBounds(newBounds);
 
         // Update the resize handle position
         if (resizeHandle) {
-            resizeHandle.setLatLng(latlng);
+            resizeHandle.setLatLng(currentLatLng);
         }
 
         // Reapply rotation
@@ -355,7 +360,7 @@ document.addEventListener('mousemove', function (e) {
     }
 
     // Update last position
-    lastPos = latlng;
+    lastPos = currentLatLng;
 });
 
 // End interaction on mouseup

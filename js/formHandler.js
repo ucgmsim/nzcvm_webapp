@@ -32,7 +32,7 @@ function updateFormValues() {
     const bounds = rectangle.getBounds();
     const center = bounds.getCenter(); // Use center as origin
     const originLat = center.lat;
-    const originLng = center.lng;
+    const originLon = center.lng; // center.lng is from Leaflet
 
     // Calculate width and height in KM using map.distance
     const southWest = bounds.getSouthWest();
@@ -49,7 +49,7 @@ function updateFormValues() {
 
     // Update form fields for origin
     document.getElementById('origin-lat').value = originLat.toFixed(6);
-    document.getElementById('origin-lng').value = originLng.toFixed(6);
+    document.getElementById('origin-lon').value = originLon.toFixed(6);
 
     // Update form fields for extents
     document.getElementById('extent-x').value = widthKm.toFixed(3);
@@ -71,7 +71,7 @@ function updateRectangleFromForm() {
     }
 
     const originLat = parseFloat(document.getElementById('origin-lat').value);
-    const originLng = parseFloat(document.getElementById('origin-lng').value);
+    const originLon = parseFloat(document.getElementById('origin-lon').value);
     const extentX = parseFloat(document.getElementById('extent-x').value);
     const extentY = parseFloat(document.getElementById('extent-y').value);
     // Read the raw value from the input for rotation
@@ -79,9 +79,9 @@ function updateRectangleFromForm() {
     const newRotation = parseFloat(newRotationRaw); // Parse it
 
     // Check if parsing was successful and other values are valid
-    if (!isNaN(originLat) && !isNaN(originLng) && !isNaN(extentX) && !isNaN(extentY) && extentX > 0 && extentY > 0 && !isNaN(newRotation)) {
+    if (!isNaN(originLat) && !isNaN(originLon) && !isNaN(extentX) && !isNaN(extentY) && extentX > 0 && extentY > 0 && !isNaN(newRotation)) {
         // Calculate new bounds based on form inputs
-        const newBounds = calculateBoundsFromOriginAndExtents(originLat, originLng, extentX, extentY);
+        const newBounds = calculateBoundsFromOriginAndExtents(originLat, originLon, extentX, extentY);
         rectangle.setBounds(newBounds);
 
         // Apply rotation, ensuring it's within [0, 360)
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Set form fields to initial default values
     // Use values from mapSetup.js for consistency
     document.getElementById('origin-lat').value = initialOriginLat.toFixed(6);
-    document.getElementById('origin-lng').value = initialOriginLng.toFixed(6);
+    document.getElementById('origin-lon').value = initialOriginLon.toFixed(6);
     document.getElementById('extent-x').value = initialExtentX.toFixed(3);
     document.getElementById('extent-y').value = initialExtentY.toFixed(3);
     // Rotation defaults to 0 if not specified otherwise
@@ -127,7 +127,7 @@ gridPointInputs.forEach(id => {
 
 // Add event listeners to form fields that control rectangle geometry/rotation
 const rectangleControlInputs = [
-    'origin-lat', 'origin-lng', 'extent-x', 'extent-y', 'rotation'
+    'origin-lat', 'origin-lon', 'extent-x', 'extent-y', 'rotation'
 ];
 rectangleControlInputs.forEach(id => {
     const inputElement = document.getElementById(id);
