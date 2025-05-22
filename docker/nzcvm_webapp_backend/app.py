@@ -137,7 +137,7 @@ def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
 
 # --- Flask Route ---
 @app.route("/run-nzcvm", methods=["POST"])
-def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
+def handle_run_nzcvm() -> Response | tuple[Response, int]:
     """Flask route handler for running the NZCVM process.
 
     Receives configuration data as JSON from a POST request. It validates
