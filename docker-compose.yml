@@ -11,7 +11,9 @@ services:
     # without needing to copy it into the container image.
     volumes:
       - /mnt/mantle_data/nzcvm_webapp/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
-    # Automatically restart the container if it stops.
+      # For local development, uncomment the line below to mount the local
+      # - /home/arr65/src/velocity_modelling/velocity_modelling/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
+      # Automatically restart the container if it stops.
     restart: always
     # Connect this service to the custom bridge network defined below.
     # This allows other containers on the same network (like the frontend)

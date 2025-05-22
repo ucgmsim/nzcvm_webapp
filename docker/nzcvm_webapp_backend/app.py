@@ -1,4 +1,3 @@
-import subprocess
 import tempfile
 import zipfile
 from typing import Dict, Tuple, Union
@@ -6,13 +5,12 @@ from pathlib import Path
 
 from flask import Flask, request, send_file, jsonify, abort, Response
 
+# Import for direct call
+from velocity_modelling.scripts.nzcvm import generate_velocity_model
+
 app = Flask(__name__)
 
 # --- Configuration ---
-# Define the path to the NZCVM script within the container
-NZCVM_SCRIPT_PATH = (
-    "/usr/local/lib/python3.12/site-packages/velocity_modelling/scripts/nzcvm.py"
-)
 
 
 # --- Helper Functions ---
@@ -47,7 +45,7 @@ def create_config_file(
 
 
 def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
-    """Runs the NZCVM command using subprocess.
+    """Runs the NZCVM process by calling the library functions directly.
 
     Executes the NZCVM script to generate the velocity model based on
     the provided configuration file, directing output to the specified directory.
@@ -68,53 +66,34 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
 
     Raises
     ------
-    FileNotFoundError
-        If the NZCVM script or python interpreter is not found.
-    subprocess.CalledProcessError
-        If the NZCVM script returns a non-zero exit code.
-    subprocess.TimeoutExpired
-        If the NZCVM script execution exceeds the timeout.
+    Exception
+        Catches exceptions from `generate_velocity_model` and logs them.
     """
-    # Construct the command to run the NZCVM script
-    command_args = [
-        "python",
-        NZCVM_SCRIPT_PATH,
-        "generate-velocity-model",
-        str(config_path),
-        "--out-dir",
-        str(output_dir),
-        "--output-format",
-        "HDF5",
-    ]
-
-    print(f"Running command: {' '.join(command_args)}")
+    print(
+        f"Running NZCVM process directly. Config: {config_path}, Output directory: {output_dir}"
+    )
     try:
-        # Setting 10 min (600 seconds) timeout
-        result = subprocess.run(
-            command_args, check=True, capture_output=True, text=True, timeout=600
+        # Call the generate_velocity_model function directly
+        # Default values for nzcvm_registry, model_version (read from cfg),
+        # data_root, smoothing, log_level will be used from generate_velocity_model
+        generate_velocity_model(
+            nzcvm_cfg_path=config_path,
+            out_dir=output_dir,
+            output_format="HDF5",
+            # log_level can be set here if needed, e.g., log_level="INFO"
+            # model_version can be passed if we want to override config, but typically read from config
         )
-        print("NZCVM Process STDOUT:")
-        print(result.stdout)
-        print("NZCVM Process STDERR:")
-        print(result.stderr)
-        print("NZCVM process completed successfully.")
+        print("NZCVM process completed successfully via direct call.")
         return True
-    except subprocess.CalledProcessError as e:
-        print(f"NZCVM process failed with exit code {e.returncode}.")
-        print("STDOUT:")
-        print(e.stdout)
-        print("STDERR:")
-        print(e.stderr)
-        return False
-    except subprocess.TimeoutExpired as e:
-        print("NZCVM process timed out.")
-        print("STDOUT:")
-        print(e.stdout)
-        print("STDERR:")
-        print(e.stderr)
-        return False
     except Exception as e:
-        print(f"An unexpected error occurred during subprocess execution: {e}")
+        # Catching a broad exception class as generate_velocity_model can raise various errors
+        # (ValueError, OSError, RuntimeError, etc.)
+        # Specific subprocess exceptions are no longer relevant.
+        print(f"NZCVM process failed during direct call: {e}")
+        # For more detailed debugging, you might want to print the full traceback
+        import traceback
+
+        print(traceback.format_exc())
         return False
 
 
@@ -258,6 +237,27 @@ def handle_run_nzcvm() -> Union[Response, Tuple[Response, int]]:
 
         # Create a copy of the config file the in the output directory so it is
         # included in the zip file for download
+        _ = create_config_file(config_data, output_dir)
+
+        # Create zip file path within the temp directory
+        zip_filename = "nzcvm_output.zip"
+        zip_path = temp_dir / zip_filename
+
+        try:
+            zip_output_files(output_dir, zip_path)
+        except Exception as e:
+            print(f"Error during zipping: {e}")
+            return jsonify({"error": f"Failed to zip output files: {e}"}), 500
+
+        print(f"Sending zip file: {zip_path}")
+
+        # Send the zip file back to the client
+        return send_file(
+            zip_path,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=zip_filename,
+        )
         _ = create_config_file(config_data, output_dir)
 
         # Create zip file path within the temp directory
