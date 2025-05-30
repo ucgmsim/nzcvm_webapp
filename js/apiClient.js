@@ -80,8 +80,8 @@ async function generateModelAndDownload() {
     }
 
     // --- Check if estimated runtime exceeds the limit ---
-    if (estimatedSeconds >= 600) {
-        statusMessage.innerHTML = 'This website can only generate models that require less than 10 min. Please reduce the number of points in your grid until the run time is less than 10 minutes, or <a href="#" id="download-config-link-for-large-model">download the configuration file</a> and generate the model on your computer.';
+    if (estimatedSeconds >= 3600) {
+        statusMessage.innerHTML = 'This website can only generate models that require less than 1 hour. Please reduce the number of points in your grid until the run time is less than 1 hour, or <a href="#" id="download-config-link-for-large-model">download the configuration file</a> and generate the model on your computer.';
         statusMessage.style.color = 'red';
         // Add event listener for the new download link
         const downloadLink = document.getElementById('download-config-link-for-large-model');

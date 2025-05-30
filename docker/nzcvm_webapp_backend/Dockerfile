@@ -36,6 +36,6 @@ ENV FLASK_APP=app.py
 # --bind 0.0.0.0:5000: Listen on all network interfaces within the container on port 5000
 # --workers 3: Number of worker processes. Each worker handles requests independently so
 # using 3 workers will allow the app to generate 3 different velocity models simultaneously.
-# --timeout 600: Set worker timeout to 600 seconds (10 minutes)
+# --timeout 3600: Set worker timeout to 3600 seconds (1 hour)
 # app:app: Look for the Flask app instance named 'app' in the 'app.py' module
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "600", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "3600", "app:app"]
