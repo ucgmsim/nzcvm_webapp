@@ -157,14 +157,11 @@ function applyRotation() {
     const center = rectangle.getBounds().getCenter();
     rectangleCenter = center;
 
-    // Get the current pixel position of the center
-    const centerPoint = map.latLngToLayerPoint(center);
-
     // Check for rectangle._path before applying styles
     if (rectangle._path) {
-        // Apply rotation transformation using CSS with absolute coordinates
+        // Apply rotation transformation using relative coordinates
         // This ensures rotation works correctly at any zoom level
-        rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
+        rectangle._path.style.transformOrigin = '50% 50%';
         rectangle._path.style.transform = `rotate(${window.rotationAngle}deg)`;
     } else {
         console.warn("Rectangle path not found during applyRotation.");
