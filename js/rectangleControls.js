@@ -14,6 +14,9 @@ const rectangle = L.rectangle(initialBounds, {
     fillOpacity: 0.2
 }).addTo(map);
 
+// Make rectangle globally accessible
+window.rectangle = rectangle;
+
 // Variables for rotation handle
 let rotationHandle = null;
 let rotationLine = null;
@@ -33,6 +36,7 @@ let isResizing = false;
 let isRotating = false;
 let lastPos = null;
 let rotationAngle = 0;
+window.rotationAngle = rotationAngle; // Make global
 let rectangleCenter = null;
 
 // Create rotation handle icon
@@ -158,7 +162,7 @@ function applyRotation() {
         // Apply rotation transformation using CSS with absolute coordinates
         // This ensures rotation works correctly at any zoom level
         rectangle._path.style.transformOrigin = `${centerPoint.x}px ${centerPoint.y}px`;
-        rectangle._path.style.transform = `rotate(${rotationAngle}deg)`;
+        rectangle._path.style.transform = `rotate(${window.rotationAngle}deg)`;
     } else {
         console.warn("Rectangle path not found during applyRotation.");
     }
@@ -170,6 +174,9 @@ function applyRotation() {
     // Update resize handle position
     updateResizeHandlePosition();
 }
+
+// Make applyRotation globally accessible
+window.applyRotation = applyRotation;
 
 // Function to create and position the resize handle
 function createResizeHandle() {
@@ -262,13 +269,11 @@ rectangle.on('mousedown', function (e) {
 
 
 // Handle mouse movement
-document.addEventListener('mousemove', function (e) {
+map.on('mousemove', function (e) {
     if (!isDragging && !isResizing && !isRotating) return;
 
-    // Convert screen position to map coordinates
-    const containerPoint = new L.Point(e.clientX, e.clientY);
-    const layerPoint = map.containerPointToLayerPoint(containerPoint);
-    const currentLatLng = map.layerPointToLatLng(layerPoint); // Renamed to avoid conflict with calculateAngle's new signature
+    // Use the map event's latlng directly for accurate positioning
+    const currentLatLng = e.latlng;
 
     if (isRotating && rectangleCenter && lastPos) { // lastPos is a Leaflet LatLng
         // Calculate rotation angle (note the negative sign)
@@ -280,6 +285,7 @@ document.addEventListener('mousemove', function (e) {
         );
         // Ensure rotationAngle stays within [0, 360)
         rotationAngle = (((rotationAngle + angleDelta) % 360) + 360) % 360;
+        window.rotationAngle = rotationAngle; // Update global
 
         // Apply the rotation
         applyRotation();
@@ -364,7 +370,7 @@ document.addEventListener('mousemove', function (e) {
 });
 
 // End interaction on mouseup
-document.addEventListener('mouseup', function () {
+map.on('mouseup', function () {
     if (!(isDragging || isResizing || isRotating)) return;
 
     // End interaction

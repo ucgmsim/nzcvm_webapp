@@ -49,14 +49,14 @@ function updateFormValues() {
 
     // Update form fields for origin
     document.getElementById('origin-lat').value = originLat.toFixed(6);
-    document.getElementById('origin-lon').value = originLon.toFixed(6);
+    document.getElementById('origin-lng').value = originLon.toFixed(6);
 
     // Update form fields for extents
     document.getElementById('extent-x').value = widthKm.toFixed(3);
     document.getElementById('extent-y').value = heightKm.toFixed(3);
 
     // Update rotation field based on the current angle from map interaction
-    document.getElementById('rotation').value = rotationAngle.toFixed(1);
+    document.getElementById('rotation').value = (window.rotationAngle || 0).toFixed(1);
 
     // Update grid point display
     updateGridPointDisplay();
@@ -71,7 +71,7 @@ function updateRectangleFromForm() {
     }
 
     const originLat = parseFloat(document.getElementById('origin-lat').value);
-    const originLon = parseFloat(document.getElementById('origin-lon').value);
+    const originLon = parseFloat(document.getElementById('origin-lng').value);
     const extentX = parseFloat(document.getElementById('extent-x').value);
     const extentY = parseFloat(document.getElementById('extent-y').value);
     // Read the raw value from the input for rotation
@@ -85,7 +85,7 @@ function updateRectangleFromForm() {
         rectangle.setBounds(newBounds);
 
         // Apply rotation, ensuring it's within [0, 360)
-        rotationAngle = ((newRotation % 360) + 360) % 360;
+        window.rotationAngle = ((newRotation % 360) + 360) % 360;
         applyRotation(); // This also updates handles
 
         // Update grid point display as extents might have changed
@@ -101,11 +101,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Set form fields to initial default values
     // Use values from mapSetup.js for consistency
     document.getElementById('origin-lat').value = initialOriginLat.toFixed(6);
-    document.getElementById('origin-lon').value = initialOriginLon.toFixed(6);
+    document.getElementById('origin-lng').value = initialOriginLon.toFixed(6);
     document.getElementById('extent-x').value = initialExtentX.toFixed(3);
     document.getElementById('extent-y').value = initialExtentY.toFixed(3);
     // Rotation defaults to 0 if not specified otherwise
-    document.getElementById('rotation').value = (rotationAngle || 0).toFixed(1);
+    document.getElementById('rotation').value = (window.rotationAngle || 0).toFixed(1);
     // Other fields retain their HTML defaults (e.g., xy-spacing, z-values, min-vs)
 
     // Initial calculation and display of grid points based on defaults
@@ -127,7 +127,7 @@ gridPointInputs.forEach(id => {
 
 // Add event listeners to form fields that control rectangle geometry/rotation
 const rectangleControlInputs = [
-    'origin-lat', 'origin-lon', 'extent-x', 'extent-y', 'rotation'
+    'origin-lat', 'origin-lng', 'extent-x', 'extent-y', 'rotation'
 ];
 rectangleControlInputs.forEach(id => {
     const inputElement = document.getElementById(id);
