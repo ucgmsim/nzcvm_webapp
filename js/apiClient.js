@@ -19,7 +19,7 @@ function getConfigurationDataForFile() {
         'EXTENT_XY_SPACING': parseFloat(document.getElementById('xy-spacing').value),
         'MIN_VS': parseFloat(document.getElementById('min-vs').value),
         'TOPO_TYPE': document.getElementById('topo-type').value,
-        'OUTPUT_DIR': document.getElementById('output-dir').value
+        'OUTPUT_DIR': '/tmp/nzcvm_output' // Fixed path for config file download
     };
 }
 
@@ -140,8 +140,8 @@ async function generateModelAndDownload() {
         EXTENT_Z_SPACING: parseFloat(document.getElementById('z-spacing').value),
         EXTENT_LATLON_SPACING: parseFloat(document.getElementById('xy-spacing').value), // Use the key expected by nzcvm.py config
         MIN_VS: parseFloat(document.getElementById('min-vs').value),
-        TOPO_TYPE: document.getElementById('topo-type').value,
-        OUTPUT_DIR: document.getElementById('output-dir').value || '/tmp/nzcvm_output' // Ensure default if empty
+        TOPO_TYPE: document.getElementById('topo-type').value
+        // OUTPUT_DIR removed - now handled by backend
     };
 
 

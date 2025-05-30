@@ -178,7 +178,6 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         "EXTENT_LATLON_SPACING",
         "MIN_VS",
         "TOPO_TYPE",
-        "OUTPUT_DIR",
     ]
     # Check for missing fields
     missing_fields = [field for field in required_fields if field not in config_data]
@@ -187,6 +186,9 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
             400,
             description=f"Missing required configuration fields: {', '.join(missing_fields)}",
         )
+
+    # Set OUTPUT_DIR to a fixed path - not exposed via API
+    config_data["OUTPUT_DIR"] = "/tmp/nzcvm_output"
 
     # Use temporary directories for isolation and easy cleanup
     with tempfile.TemporaryDirectory() as temp_dir_str:
@@ -246,8 +248,6 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
             as_attachment=True,
             download_name=zip_filename,
         )
-        _ = create_config_file(config_data, output_dir)
-
         # Create zip file path within the temp directory
         zip_filename = "nzcvm_output.zip"
         zip_path = temp_dir / zip_filename
