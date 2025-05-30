@@ -102,7 +102,7 @@ function updateRotationHandlePosition() {
     const vecY = topCenterPoint.y - centerPoint.y;
 
     // Apply rotation to this vector
-    const angle = rotationAngle * (Math.PI / 180);
+    const angle = (window.rotationAngle || 0) * (Math.PI / 180);
     const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
     const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
 
@@ -150,6 +150,9 @@ function updateRotationHandlePosition() {
 function applyRotation() {
     // Check for rectangle existence
     if (!rectangle) return;
+
+    // Sync local rotationAngle with global
+    rotationAngle = window.rotationAngle || 0;
 
     const center = rectangle.getBounds().getCenter();
     rectangleCenter = center;
@@ -219,7 +222,7 @@ function updateResizeHandlePosition() {
     const vecY = cornerPoint.y - centerPoint.y;
 
     // Apply rotation to this vector
-    const angle = rotationAngle * (Math.PI / 180);
+    const angle = (window.rotationAngle || 0) * (Math.PI / 180);
     const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
     const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
 
@@ -315,7 +318,7 @@ map.on('mousemove', function (e) {
         const centerPoint = map.latLngToContainerPoint(rectangleCenter); // rectangleCenter is Leaflet LatLng
 
         // Calculate rotation vectors once (optimization)
-        const angle = rotationAngle * Math.PI / 180;
+        const angle = (window.rotationAngle || 0) * Math.PI / 180;
         const cosAngle = Math.cos(angle);
         const sinAngle = Math.sin(angle);
 
