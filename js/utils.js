@@ -81,10 +81,12 @@ function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, 
     }
 
     // Calculate grid dimensions
-    const nx = Math.round(extentX / extentLatlonSpacing);
-    const ny = Math.round(extentY / extentLatlonSpacing);
+    // Round floats ending in .5 up to the next highest integer for consistency with 
+    // the original velocity model in code in C.
+    const nx = Math.floor((extentX / extentLatlonSpacing) + 0.5);
+    const ny = Math.floor((extentY / extentLatlonSpacing) + 0.5);
     // Ensure nz is at least 1 if zmax equals zmin
-    const nz = Math.max(1, Math.round((extentZmax - extentZmin) / extentZSpacing));
+    const nz = Math.max(1, Math.floor(((extentZmax - extentZmin) / extentZSpacing) + 0.5));
 
     // Calculate total number of grid points
     const totalGridPoints = nx * ny * nz;
