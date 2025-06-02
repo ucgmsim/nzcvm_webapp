@@ -10,11 +10,11 @@ services:
     # location in the container. This allows the backend to access the data
     # without needing to copy it into the container image.
     volumes:
-      - /mnt/mantle_data/nzcvm_webapp/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
+      #- /mnt/mantle_data/nzcvm_webapp/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
       # For local development, uncomment the line below to mount the local
-      # - /home/arr65/src/velocity_modelling/velocity_modelling/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
+      - /home/arr65/src/velocity_modelling/velocity_modelling/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
       # For local Python code development, uncomment the line below:
-      # - ./docker/nzcvm_webapp_backend:/app
+      - ./docker/nzcvm_webapp_backend:/app
       # Automatically restart the container if it stops.
     restart: always
     # Connect this service to the custom bridge network defined below.
@@ -34,10 +34,10 @@ services:
     depends_on:
       - nzcvm_webapp_backend
     # For local Javascript code development, uncomment the line below:
-    #volumes:
-    #  - ./js:/usr/share/nginx/html/js
-    #  - ./css:/usr/share/nginx/html/css # Optional: if you also want to mount CSS
-    #  - ./index.html:/usr/share/nginx/html/index.html # Optional: if you also want to mount index.html
+    volumes:
+      - ./js:/usr/share/nginx/html/js
+      - ./css:/usr/share/nginx/html/css # Optional: if you also want to mount CSS
+      - ./index.html:/usr/share/nginx/html/index.html # Optional: if you also want to mount index.html
     # Automatically restart the container if it stops.
     restart: always
 
