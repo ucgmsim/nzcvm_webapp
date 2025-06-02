@@ -5,9 +5,14 @@ let countdownIntervalId = null;
 
 // Function to collect all configuration data from the form for config file download
 function getConfigurationDataForFile() {
+    // Extract actual model version from filename
+    const selectedFilename = document.getElementById('model-version').value;
+    const versionMatch = selectedFilename.match(/model_version_(\d+)p(\d+)/);
+    const modelVersion = versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
+    
     return {
         'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed
-        'MODEL_VERSION': document.getElementById('model-version').value,
+        'MODEL_VERSION': modelVersion,
         'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
         'ORIGIN_LON': parseFloat(document.getElementById('origin-lon').value),
         'EXTENT_X': parseFloat(document.getElementById('extent-x').value),
@@ -129,7 +134,12 @@ async function generateModelAndDownload() {
     // Collect form data for the API request
     const formData = {
         CALL_TYPE: 'GENERATE_VELOCITY_MOD',
-        MODEL_VERSION: document.getElementById('model-version').value,
+        MODEL_VERSION: (() => {
+            // Extract actual model version from filename
+            const selectedFilename = document.getElementById('model-version').value;
+            const versionMatch = selectedFilename.match(/model_version_(\d+)p(\d+)/);
+            return versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
+        })(),
         ORIGIN_LAT: parseFloat(document.getElementById('origin-lat').value),
         ORIGIN_LON: parseFloat(document.getElementById('origin-lon').value),
         ORIGIN_ROT: parseFloat(document.getElementById('rotation').value),

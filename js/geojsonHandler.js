@@ -3,6 +3,60 @@
 // Variables for GeoJSON overlay
 let currentGeoJSONLayer = null;
 let legend = null;
+let availableGeoJSONFiles = [];
+
+// Function to load available GeoJSON files from backend and populate dropdown
+async function loadAvailableGeoJSONFiles() {
+    try {
+        const response = await fetch('/nzcvm_webapp/geojson/list');
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        availableGeoJSONFiles = data.files || [];
+        
+        // Populate the model version dropdown with available files
+        populateModelVersionDropdown();
+        
+    } catch (error) {
+        console.error('Error loading available GeoJSON files:', error);
+        alert('Failed to load available GeoJSON files from backend. Please check your connection.');
+    }
+}
+
+// Function to populate model version dropdown based on available files
+function populateModelVersionDropdown() {
+    const dropdown = document.getElementById('model-version');
+    dropdown.innerHTML = ''; // Clear existing options
+    
+    // Create options based on available files
+    availableGeoJSONFiles.forEach(filename => {
+        // Extract version from filename (e.g., "model_version_2p03_basins.geojson.gz" -> "2.03")
+        const versionMatch = filename.match(/model_version_(\d+)p(\d+)/);
+        if (versionMatch) {
+            const version = `${versionMatch[1]}.${versionMatch[2]}`;
+            const option = document.createElement('option');
+            option.value = filename; // Store the full filename as value
+            option.textContent = version; // Display the version number
+            dropdown.appendChild(option);
+        }
+    });
+}
+function addLegend() {
+    if (legend) {
+        map.removeControl(legend);
+    }
+
+    legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = '<h4>Basin Regions</h4>' +
+            '<i style="background:#ba0045"></i> Basin Areas<br>';
+        return div;
+    };
+    legend.addTo(map);
+}
 
 // Function to add a legend to the map
 function addLegend() {
@@ -20,8 +74,8 @@ function addLegend() {
     legend.addTo(map);
 }
 
-// Function to load and display GeoJSON based on model version
-function loadGeoJSONByModelVersion(modelVersion) {
+// Function to load and display GeoJSON based on filename
+function loadGeoJSONByModelVersion(filename) {
     // Clear existing GeoJSON layer if any
     if (currentGeoJSONLayer) {
         map.removeLayer(currentGeoJSONLayer);
@@ -32,19 +86,10 @@ function loadGeoJSONByModelVersion(modelVersion) {
         }
     }
 
-    // Map model version to corresponding GeoJSON file
-    let filename = '';
-    if (modelVersion === '2.03') {
-        filename = 'model_version_2p03_basins.geojson.gz';
-    } else if (modelVersion === '2.07') {
-        filename = 'model_version_2p07_basins.geojson.gz';
-    } else {
-        console.warn('No GeoJSON defined for model version:', modelVersion);
-        return; // Don't try to load if no file is defined
+    if (!filename || !filename.endsWith('.geojson.gz')) {
+        console.warn('Invalid or missing GeoJSON filename:', filename);
+        return;
     }
-
-    // Updated path to GeoJSON files with new structure
-    const geoJsonUrl = 'data/basins/' + filename;
 
     // Create a loading indicator
     const loadingDiv = document.createElement('div');
@@ -61,25 +106,15 @@ function loadGeoJSONByModelVersion(modelVersion) {
     loadingDiv.innerText = 'Loading GeoJSON data...';
     document.getElementById('map-container').appendChild(loadingDiv);
 
-    console.log('Loading GeoJSON from:', geoJsonUrl);
+    console.log('Loading GeoJSON:', filename);
 
-    // Fetch the GeoJSON file
-    fetch(geoJsonUrl)
+    // Fetch from backend
+    fetch(`/nzcvm_webapp/geojson/${filename}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
             }
-            return response.body;
-        })
-        .then(rs => {
-            // Check if browser supports DecompressionStream
-            if (typeof DecompressionStream === 'undefined') {
-                throw new Error('Browser does not support DecompressionStream for Gzip.');
-            }
-            return rs.pipeThrough(new DecompressionStream("gzip"));
-        })
-        .then(rs => {
-            return new Response(rs).json();
+            return response.json(); // Backend response is already decompressed JSON
         })
         .then(data => {
             // Use performance optimized approach for GeoJSON rendering
@@ -120,7 +155,7 @@ function loadGeoJSONByModelVersion(modelVersion) {
             if (loadingIndicator) {
                 loadingIndicator.remove();
             }
-            alert(`Error loading GeoJSON: ${errorMsg}. Check console for details.`);
+            alert(`Error loading GeoJSON: ${errorMsg}. Please check console for details.`);
         });
 }
 
@@ -129,8 +164,14 @@ document.getElementById('model-version').addEventListener('change', function () 
     loadGeoJSONByModelVersion(this.value);
 });
 
-// Load initial GeoJSON based on default selected model version
-document.addEventListener('DOMContentLoaded', function () {
-    const initialModelVersion = document.getElementById('model-version').value;
-    loadGeoJSONByModelVersion(initialModelVersion);
+// Load initial GeoJSON and populate dropdown on page load
+document.addEventListener('DOMContentLoaded', async function () {
+    // First load available files from backend
+    await loadAvailableGeoJSONFiles();
+    
+    // Then load the initial GeoJSON based on the first available option
+    const dropdown = document.getElementById('model-version');
+    if (dropdown.options.length > 0) {
+        loadGeoJSONByModelVersion(dropdown.value);
+    }
 });

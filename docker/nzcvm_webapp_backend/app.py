@@ -1,16 +1,19 @@
 import tempfile
 import zipfile
 from pathlib import Path
+import os
 
 from flask import Flask, request, send_file, jsonify, abort, Response
+from flask_cors import CORS
 
 # Import for direct call
 from velocity_modelling.scripts.nzcvm import generate_velocity_model
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # --- Configuration ---
-
+GEOJSON_DIR = Path("/usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions_gz")
 
 # --- Helper Functions ---
 def create_config_file(
@@ -125,6 +128,75 @@ def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
 
 
 # --- Flask Route ---
+@app.route("/geojson/list", methods=["GET"])
+def list_geojson_files() -> Response:
+    """List available GeoJSON files from the model_versions_gz directory.
+    
+    Returns
+    -------
+    Response
+        JSON response containing a list of available GeoJSON files.
+    """
+    try:
+        if not GEOJSON_DIR.exists():
+            return jsonify({"error": "GeoJSON directory not found"}), 404
+        
+        # Find all .geojson.gz files
+        geojson_files = []
+        for file_path in GEOJSON_DIR.glob("*.geojson.gz"):
+            geojson_files.append(file_path.name)
+        
+        return jsonify({"files": sorted(geojson_files)})
+    
+    except Exception as e:
+        print(f"Error listing GeoJSON files: {e}")
+        return jsonify({"error": "Failed to list GeoJSON files"}), 500
+
+
+@app.route("/geojson/<filename>", methods=["GET"])
+def serve_geojson_file(filename: str) -> Response:
+    """Serve a specific GeoJSON file from the model_versions_gz directory.
+    
+    Parameters
+    ----------
+    filename : str
+        The name of the GeoJSON file to serve (should end with .geojson.gz)
+    
+    Returns
+    -------
+    Response
+        The compressed GeoJSON data with appropriate headers for nginx decompression.
+    """
+    try:
+        # Validate filename to prevent path traversal attacks
+        if ".." in filename or "/" in filename:
+            return jsonify({"error": "Invalid filename"}), 400
+        
+        file_path = GEOJSON_DIR / filename
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        if not file_path.suffix == ".gz" or not filename.endswith(".geojson.gz"):
+            return jsonify({"error": "File must be a .geojson.gz file"}), 400
+        
+        # Send the compressed file directly with appropriate headers
+        response = send_file(
+            file_path,
+            mimetype="application/json",
+            as_attachment=False,
+        )
+        # Set headers to indicate the content is gzipped
+        # nginx will decompress it with the gunzip directive
+        response.headers['Content-Encoding'] = 'gzip'
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    
+    except Exception as e:
+        print(f"Error serving GeoJSON file {filename}: {e}")
+        return jsonify({"error": "Failed to serve GeoJSON file"}), 500
+
+
 @app.route("/run-nzcvm", methods=["POST"])
 def handle_run_nzcvm() -> Response | tuple[Response, int]:
     """Flask route handler for running the NZCVM process.
