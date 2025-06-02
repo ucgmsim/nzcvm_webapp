@@ -16,6 +16,10 @@ RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
 RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling@main#egg=velocity_modelling
 
+# Copy and gzip model versions
+RUN cp -r /usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions /usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions_gz && \
+    find /usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions_gz -type f -exec gzip {} \;
+
 # Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
 RUN pip install --no-cache-dir -r requirements.txt
 
