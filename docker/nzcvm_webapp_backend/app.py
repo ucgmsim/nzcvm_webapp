@@ -16,6 +16,9 @@ CORS(app)  # Enable CORS for all routes
 GEOJSON_DIR = Path(
     "/usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional"
 )
+MODEL_VERSIONS_DIR = Path(
+    "/usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions"
+)
 
 
 # --- Helper Functions ---
