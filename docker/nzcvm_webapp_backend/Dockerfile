@@ -16,9 +16,14 @@ RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
 RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling@main#egg=velocity_modelling
 
-# Copy and gzip model versions
-RUN cp -r /usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions /usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions_gz && \
-    find /usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions_gz -type f -exec gzip {} \;
+# After velocity_modelling installation, find all .geojson files and create gzipped copies
+RUN find /usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional -name "*.geojson" -type f | \
+    while read file; do \
+    echo "Compressing: $file"; \
+    gzip -c "$file" > "$file.gz"; \
+    done && \
+    echo "GeoJSON compression complete. Files found and compressed:" && \
+    find /usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional -name "*.geojson*" -type f | sort
 
 # Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
 RUN pip install --no-cache-dir -r requirements.txt

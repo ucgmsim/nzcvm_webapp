@@ -13,7 +13,10 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # --- Configuration ---
-GEOJSON_DIR = Path("/usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions_gz")
+GEOJSON_DIR = Path(
+    "/usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional"
+)
+
 
 # --- Helper Functions ---
 def create_config_file(
@@ -130,24 +133,24 @@ def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
 # --- Flask Route ---
 @app.route("/geojson/list", methods=["GET"])
 def list_geojson_files() -> Response:
-    """List available GeoJSON files from the model_versions_gz directory.
-    
+    """List available compressed GeoJSON files from the regional directory.
+
     Returns
     -------
     Response
-        JSON response containing a list of available GeoJSON files.
+        JSON response containing a list of available compressed GeoJSON files.
     """
     try:
         if not GEOJSON_DIR.exists():
             return jsonify({"error": "GeoJSON directory not found"}), 404
-        
-        # Find all .geojson.gz files
+
+        # Find only compressed basin GeoJSON files
         geojson_files = []
-        for file_path in GEOJSON_DIR.glob("*.geojson.gz"):
+        for file_path in GEOJSON_DIR.glob("*basins.geojson.gz"):
             geojson_files.append(file_path.name)
-        
+
         return jsonify({"files": sorted(geojson_files)})
-    
+
     except Exception as e:
         print(f"Error listing GeoJSON files: {e}")
         return jsonify({"error": "Failed to list GeoJSON files"}), 500
@@ -155,43 +158,41 @@ def list_geojson_files() -> Response:
 
 @app.route("/geojson/<filename>", methods=["GET"])
 def serve_geojson_file(filename: str) -> Response:
-    """Serve a specific GeoJSON file from the model_versions_gz directory.
-    
+    """Serve a compressed GeoJSON file from the regional directory.
+
     Parameters
     ----------
     filename : str
-        The name of the GeoJSON file to serve (should end with .geojson.gz)
-    
+        The name of the compressed GeoJSON file to serve (must be .geojson.gz)
+
     Returns
     -------
     Response
-        The compressed GeoJSON data with appropriate headers for nginx decompression.
+        The compressed GeoJSON data with appropriate headers.
     """
     try:
         # Validate filename to prevent path traversal attacks
         if ".." in filename or "/" in filename:
             return jsonify({"error": "Invalid filename"}), 400
-        
+
         file_path = GEOJSON_DIR / filename
-        
+
         if not file_path.exists():
             return jsonify({"error": "File not found"}), 404
-        
-        if not file_path.suffix == ".gz" or not filename.endswith(".geojson.gz"):
+
+        if not filename.endswith(".geojson.gz"):
             return jsonify({"error": "File must be a .geojson.gz file"}), 400
-        
-        # Send the compressed file directly with appropriate headers
+
+        # Send compressed file with gzip encoding header
         response = send_file(
             file_path,
             mimetype="application/json",
             as_attachment=False,
         )
-        # Set headers to indicate the content is gzipped
-        # nginx will decompress it with the gunzip directive
-        response.headers['Content-Encoding'] = 'gzip'
-        response.headers['Content-Type'] = 'application/json'
+        response.headers["Content-Encoding"] = "gzip"
+        response.headers["Content-Type"] = "application/json"
         return response
-    
+
     except Exception as e:
         print(f"Error serving GeoJSON file {filename}: {e}")
         return jsonify({"error": "Failed to serve GeoJSON file"}), 500

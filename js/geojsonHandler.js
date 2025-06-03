@@ -8,17 +8,17 @@ let availableGeoJSONFiles = [];
 // Function to load available GeoJSON files from backend and populate dropdown
 async function loadAvailableGeoJSONFiles() {
     try {
-        const response = await fetch('/nzcvm_webapp/geojson/list');
+        const response = await fetch('/geojson/list');
         if (!response.ok) {
             throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
         availableGeoJSONFiles = data.files || [];
-        
+
         // Populate the model version dropdown with available files
         populateModelVersionDropdown();
-        
+
     } catch (error) {
         console.error('Error loading available GeoJSON files:', error);
         alert('Failed to load available GeoJSON files from backend. Please check your connection.');
@@ -29,7 +29,7 @@ async function loadAvailableGeoJSONFiles() {
 function populateModelVersionDropdown() {
     const dropdown = document.getElementById('model-version');
     dropdown.innerHTML = ''; // Clear existing options
-    
+
     // Create options based on available files
     availableGeoJSONFiles.forEach(filename => {
         // Extract version from filename (e.g., "model_version_2p03_basins.geojson.gz" -> "2.03")
@@ -87,7 +87,7 @@ function loadGeoJSONByModelVersion(filename) {
     }
 
     if (!filename || !filename.endsWith('.geojson.gz')) {
-        console.warn('Invalid or missing GeoJSON filename:', filename);
+        console.warn('Invalid or missing compressed GeoJSON filename:', filename);
         return;
     }
 
@@ -109,7 +109,7 @@ function loadGeoJSONByModelVersion(filename) {
     console.log('Loading GeoJSON:', filename);
 
     // Fetch from backend
-    fetch(`/nzcvm_webapp/geojson/${filename}`)
+    fetch(`/geojson/${filename}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
@@ -168,7 +168,7 @@ document.getElementById('model-version').addEventListener('change', function () 
 document.addEventListener('DOMContentLoaded', async function () {
     // First load available files from backend
     await loadAvailableGeoJSONFiles();
-    
+
     // Then load the initial GeoJSON based on the first available option
     const dropdown = document.getElementById('model-version');
     if (dropdown.options.length > 0) {
