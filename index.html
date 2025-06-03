@@ -2,7 +2,10 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+    <div class="form-group">
+        <label for="origin-lon">Origin Longitude:</label>
+        <input type="number" id="origin-lon" step="0.000001">
+    </div>meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NZCVM web app</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> <!-- Add Leaflet CSS back -->
@@ -41,8 +44,8 @@
                 <input type="number" id="origin-lat" step="0.1">
             </div>
             <div class="form-group">
-                <label for="origin-lng">Origin Longitude:</label>
-                <input type="number" id="origin-lng" step="0.1">
+                <label for="origin-lon">Origin Longitude:</label>
+                <input type="number" id="origin-lon" step="0.1">
             </div>
             <div class="form-group">
                 <label for="extent-x">Extent X (km):</label>
