@@ -147,7 +147,7 @@ async function generateModelAndDownload() {
 
     try {
         // Send data to backend API endpoint
-        const response = await fetch('/nzcvm_webapp/run-nzcvm', { // Matches Nginx proxy location
+        const response = await fetch('run-nzcvm', { // Relative path since we're served from /nzcvm_webapp/
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
