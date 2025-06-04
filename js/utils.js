@@ -68,23 +68,30 @@ function calculateAngle(center, p1, p2) {
  *
  * @param {number} extentX - X extent of the model in km.
  * @param {number} extentY - Y extent of the model in km.
- * @param {number} extentLatlonSpacing - Horizontal grid spacing in km.
+ * @param {number} extentLatlonSpacingKm - Horizontal grid spacing in km.
  * @param {number} extentZmax - Maximum depth in km.
  * @param {number} extentZmin - Minimum depth in km.
  * @param {number} extentZSpacing - Vertical grid spacing in km.
+ * @param {number} originLat - Origin latitude for degree conversion.
  * @returns {{nx: number, ny: number, nz: number, totalGridPoints: number}} An object containing nx, ny, nz, and total_grid_points.
  */
-function calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing) {
+function calculateGridPoints(extentX, extentY, extentLatlonSpacingKm, extentZmax, extentZmin, extentZSpacing, originLat) {
     // Validate inputs - return null or default values if invalid
-    if (isNaN(extentX) || isNaN(extentY) || isNaN(extentLatlonSpacing) || isNaN(extentZmax) || isNaN(extentZmin) || isNaN(extentZSpacing) || extentLatlonSpacing <= 0 || extentZSpacing <= 0) {
+    if (isNaN(extentX) || isNaN(extentY) || isNaN(extentLatlonSpacingKm) || isNaN(extentZmax) || isNaN(extentZmin) || isNaN(extentZSpacing) || isNaN(originLat) || extentLatlonSpacingKm <= 0 || extentZSpacing <= 0) {
         return { nx: NaN, ny: NaN, nz: NaN, totalGridPoints: NaN };
     }
+
+    // Convert spacing from km to degrees
+    const spacingDegrees = kmToDegrees(extentLatlonSpacingKm, originLat);
+    // Convert extents from km to degrees
+    const extentXDegrees = kmToDegrees(extentX, originLat).lon;
+    const extentYDegrees = kmToDegrees(extentY, originLat).lat;
 
     // Calculate grid dimensions
     // Round floats ending in .5 up to the next highest integer for consistency with 
     // the original velocity model in code in C.
-    const nx = Math.floor((extentX / extentLatlonSpacing) + 0.5);
-    const ny = Math.floor((extentY / extentLatlonSpacing) + 0.5);
+    const nx = Math.floor((extentXDegrees / spacingDegrees.lon) + 0.5);
+    const ny = Math.floor((extentYDegrees / spacingDegrees.lat) + 0.5);
     // Ensure nz is at least 1 if zmax equals zmin
     const nz = Math.max(1, Math.floor(((extentZmax - extentZmin) / extentZSpacing) + 0.5));
 

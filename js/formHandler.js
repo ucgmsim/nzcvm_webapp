@@ -8,8 +8,9 @@ function updateGridPointDisplay() {
     const extentZmax = parseFloat(document.getElementById('extent-zmax').value);
     const extentZmin = parseFloat(document.getElementById('extent-zmin').value);
     const extentZSpacing = parseFloat(document.getElementById('z-spacing').value);
+    const originLat = parseFloat(document.getElementById('origin-lat').value);
 
-    const gridData = calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing);
+    const gridData = calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing, originLat);
     const approxRunTimeMin = calculateApproxRunTime(gridData.totalGridPoints) / 60.0;
 
     // Use Number.toLocaleString() for better readability of large numbers

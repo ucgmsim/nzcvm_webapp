@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Spacing Conversion - NZCVM Webapp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: inline-block;
+            width: 200px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100px;
+            padding: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .comparison {
+            background-color: #e7f3ff;
+            padding: 10px;
+            border-left: 4px solid #2196F3;
+            margin: 10px 0;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>NZCVM Spacing Conversion Test</h1>
+    <p>This test page validates the conversion from km to degrees for grid spacing calculations.</p>
+
+    <div class="form-group">
+        <label>Origin Lat:</label>
+        <input type="number" id="origin-lat" value="-41.5" step="0.1">
+        <span>(Wellington area)</span>
+    </div>
+    <div class="form-group">
+        <label>Extent X (km):</label>
+        <input type="number" id="extent-x" value="300" step="10">
+    </div>
+    <div class="form-group">
+        <label>Extent Y (km):</label>
+        <input type="number" id="extent-y" value="300" step="10">
+    </div>
+    <div class="form-group">
+        <label>XY Spacing (km):</label>
+        <input type="number" id="xy-spacing" value="0.4" step="0.1">
+    </div>
+    <div class="form-group">
+        <label>Z Max (km):</label>
+        <input type="number" id="extent-zmax" value="45" step="1">
+    </div>
+    <div class="form-group">
+        <label>Z Min (km):</label>
+        <input type="number" id="extent-zmin" value="0" step="1">
+    </div>
+    <div class="form-group">
+        <label>Z Spacing (km):</label>
+        <input type="number" id="z-spacing" value="0.4" step="0.1">
+    </div>
+
+    <button onclick="testConversion()">Test Conversion</button>
+    <button onclick="testApiConfig()">Test API Config Generation</button>
+    <div id="result"></div>
+    <script src="js/utils.js"></script>
+    <script>
+        function testConversion() {
+            try {
+                const originLat = parseFloat(document.getElementById('origin-lat').value);
+                const extentX = parseFloat(document.getElementById('extent-x').value);
+                const extentY = parseFloat(document.getElementById('extent-y').value);
+                const spacingKm = parseFloat(document.getElementById('xy-spacing').value);
+                const extentZmax = parseFloat(document.getElementById('extent-zmax').value);
+                const extentZmin = parseFloat(document.getElementById('extent-zmin').value);
+                const extentZSpacing = parseFloat(document.getElementById('z-spacing').value);
+
+                // Test the conversion
+                const spacingDegrees = kmToDegrees(spacingKm, originLat);
+                console.log('Spacing in km:', spacingKm);
+                console.log('Spacing in degrees:', spacingDegrees);
+
+                // Test grid calculation
+                const gridData = calculateGridPoints(extentX, extentY, spacingKm, extentZmax, extentZmin, extentZSpacing, originLat);
+                console.log('Grid data:', gridData);
+
+                // Calculate what the old method would have given
+                const oldNx = Math.floor((extentX / spacingKm) + 0.5);
+                const oldNy = Math.floor((extentY / spacingKm) + 0.5);
+                const oldTotal = oldNx * oldNy * gridData.nz;
+
+                document.getElementById('result').innerHTML = `
+                    <h3>Conversion Results</h3>
+                    <p><strong>Input Spacing:</strong> ${spacingKm} km</p>
+                    <p><strong>Converted to Degrees:</strong></p>
+                    <ul>
+                        <li>Latitude: ${spacingDegrees.lat.toFixed(6)}°</li>
+                        <li>Longitude: ${spacingDegrees.lon.toFixed(6)}°</li>
+                        <li>Used for API: ${Math.max(spacingDegrees.lat, spacingDegrees.lon).toFixed(6)}° (max of lat/lon)</li>
+                    </ul>
+                    
+                    <h3>Grid Calculation (New Method)</h3>
+                    <ul>
+                        <li>nx (longitude points): ${gridData.nx}</li>
+                        <li>ny (latitude points): ${gridData.ny}</li>
+                        <li>nz (depth points): ${gridData.nz}</li>
+                        <li><strong>Total points: ${gridData.totalGridPoints.toLocaleString()}</strong></li>
+                    </ul>
+                    
+                    <div class="comparison">
+                        <h3>Comparison with Old Method</h3>
+                        <p>Old method (treating km spacing as if it were degrees):</p>
+                        <ul>
+                            <li>nx: ${oldNx}</li>
+                            <li>ny: ${oldNy}</li>
+                            <li>nz: ${gridData.nz}</li>
+                            <li>Total points: ${oldTotal.toLocaleString()}</li>
+                        </ul>
+                        <p><strong>Difference:</strong> ${((gridData.totalGridPoints - oldTotal) / oldTotal * 100).toFixed(1)}% ${gridData.totalGridPoints > oldTotal ? 'more' : 'fewer'} points</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function testApiConfig() {
+            try {
+                // Simulate the API config generation process
+                const spacingKm = parseFloat(document.getElementById('xy-spacing').value);
+                const originLat = parseFloat(document.getElementById('origin-lat').value);
+                const spacingDegrees = kmToDegrees(spacingKm, originLat);
+                const apiSpacing = Math.max(spacingDegrees.lat, spacingDegrees.lon);
+
+                // Mock the API config data structure
+                const configData = {
+                    'CALL_TYPE': 'GENERATE_VELOCITY_MOD',
+                    'MODEL_VERSION': '2.03',
+                    'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
+                    'EXTENT_X': parseFloat(document.getElementById('extent-x').value),
+                    'EXTENT_Y': parseFloat(document.getElementById('extent-y').value),
+                    'EXTENT_ZMAX': parseFloat(document.getElementById('extent-zmax').value),
+                    'EXTENT_ZMIN': parseFloat(document.getElementById('extent-zmin').value),
+                    'EXTENT_Z_SPACING': parseFloat(document.getElementById('z-spacing').value),
+                    'EXTENT_LATLON_SPACING': apiSpacing,
+                    'MIN_VS': 500.0,
+                    'TOPO_TYPE': 'BULLDOZED'
+                };
+
+                // Create configuration file content string
+                const config = Object.entries(configData)
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join('\n');
+
+                document.getElementById('result').innerHTML = `
+                    <h3>API Configuration Test</h3>
+                    <p><strong>Generated Config:</strong></p>
+                    <pre style="background-color: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto;">${config}</pre>
+                    <p><strong>Key Point:</strong> EXTENT_LATLON_SPACING is now ${apiSpacing.toFixed(6)} degrees (converted from ${spacingKm} km)</p>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-run test on page load
+        window.onload = function () {
+            testConversion();
+        };
+    </script>
+</body>
+
+</html>
