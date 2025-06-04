@@ -174,7 +174,7 @@ function updateRotationHandlePosition() {
     const vecY = topCenterPoint.y - centerPoint.y;
 
     // Apply rotation to this vector
-    const angle = (window.rotationAngle || 0) * (Math.PI / 180);
+    const angle = -(window.rotationAngle || 0) * (Math.PI / 180); // Negative for screen coordinates
     const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
     const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
 
