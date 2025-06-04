@@ -28,9 +28,6 @@ RUN find /usr/local/lib/python3.12/site-packages/velocity_modelling/data/regiona
 # Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the Flask application file (app.py) into the container at /app
-COPY docker/nzcvm_webapp_backend/app.py /app/
-
 # Expose port 5000 for inter-container communication (Gunicorn listens here).
 # This informs Docker the container uses this port; it does not publish
 # the port to the host (that's done via 'ports' in docker-compose.yml).
@@ -38,6 +35,10 @@ EXPOSE 5000
 
 # Define environment variable
 ENV FLASK_APP=app.py
+
+# Copy the Flask application file (app.py) into the container at /app
+# This is done LAST to ensure that changes to app.py don't invalidate the package cache
+COPY docker/nzcvm_webapp_backend/app.py /app/
 
 
 # Run app.py when the container launches using Gunicorn
