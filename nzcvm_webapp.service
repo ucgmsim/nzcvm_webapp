@@ -29,9 +29,9 @@ TimeoutStartSec=0
 # Run a shell script inline. If the /mnt/mantle_data/nzcvm_webapp/repo dir doesn’t exist, clone; otherwise, pull
 ExecStartPre=/usr/bin/bash -c '\
   if [ ! -d /mnt/mantle_data/nzcvm_webapp/repo ]; then \
-    git clone --branch revert4 --single-branch https://github.com/ucgmsim/nzcvm_webapp.git /mnt/mantle_data/nzcvm_webapp/repo; \
+    git clone --branch fixing-introduced-bugs1 --single-branch https://github.com/ucgmsim/nzcvm_webapp.git /mnt/mantle_data/nzcvm_webapp/repo; \
   else \
-    cd /mnt/mantle_data/nzcvm_webapp/repo && git fetch --all && git reset --hard origin/revert4; \
+    cd /mnt/mantle_data/nzcvm_webapp/repo && git fetch --all && git reset --hard origin/fixing-introduced-bugs1; \
   fi'
 
 # Use instructions in docker-compose.yml to pull the latest Docker container images 
