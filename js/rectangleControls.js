@@ -218,6 +218,11 @@ function updateRotationHandlePosition() {
     rotationHandle.on('mousedown', function (e) {
         isRotating = true;
         lastPos = e.latlng;
+
+        // Ensure rectangleCenter is set for rotation calculations
+        const bounds = rectangle.getBounds();
+        rectangleCenter = bounds.getCenter();
+
         map.dragging.disable(); // Disable map dragging while rotating
 
         // Prevent event propagation
@@ -238,6 +243,12 @@ function updateRotationHandlePosition() {
 function applyRotation() {
     // Check for rectangle existence
     if (!rectangle) return;
+
+    // Ensure rectangleCenter is set
+    if (!rectangleCenter) {
+        const bounds = rectangle.getBounds();
+        rectangleCenter = bounds.getCenter();
+    }
 
     // Sync local rotationAngle with global and apply to rectangle
     rotationAngle = window.rotationAngle || 0;
