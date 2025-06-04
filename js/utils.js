@@ -52,14 +52,14 @@ function calculateBoundsFromOriginAndExtents(originLat, originLon, extentX, exte
  * @param {{lat: number, lon: number}} center - The common point (vertex) of the two vectors.
  * @param {{lat: number, lon: number}} p1 - The end point of the first vector.
  * @param {{lat: number, lon: number}} p2 - The end point of the second vector.
- * @returns {number} The angle in degrees. Positive values indicate a counter-clockwise
+ * @returns {number} The angle in degrees. Positive values indicate a clockwise
  *                   angle from vector (center-p1) to vector (center-p2).
  */
 // Calculate angle between three points (used for rotation)
 function calculateAngle(center, p1, p2) {
     const angle1 = Math.atan2(p1.lat - center.lat, p1.lon - center.lon);
     const angle2 = Math.atan2(p2.lat - center.lat, p2.lon - center.lon);
-    return ((angle2 - angle1) * 180 / Math.PI);
+    return -((angle2 - angle1) * 180 / Math.PI); // Negated for clockwise convention
 }
 
 

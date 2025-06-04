@@ -35,30 +35,46 @@ const RotatableRectangle = L.Polygon.extend({
         const center = bounds.getCenter();
         const sw = bounds.getSouthWest();
         const ne = bounds.getNorthEast();
-        const halfWidth = (ne.lng - sw.lng) / 2;
-        const halfHeight = (ne.lat - sw.lat) / 2;
 
-        // Convert rotation angle to radians
-        const angleRad = angle * (Math.PI / 180);
+        // Convert degree extents to kilometers for proper rotation
+        const degreeExtents = degreesToKm(
+            ne.lat - sw.lat,  // height in degrees
+            ne.lng - sw.lng,  // width in degrees  
+            center.lat        // reference latitude for conversion
+        );
 
-        // Define the four corners relative to center (before rotation)
+        const halfWidthKm = degreeExtents.lonKm / 2;
+        const halfHeightKm = degreeExtents.latKm / 2;
+
+        // Convert rotation angle to radians (negative for clockwise rotation)
+        const angleRad = -angle * (Math.PI / 180);
+
+        // Define the four corners relative to center in kilometers
         const relativeCorners = [
-            [-halfWidth, -halfHeight], // SW
-            [halfWidth, -halfHeight],  // SE
-            [halfWidth, halfHeight],   // NE
-            [-halfWidth, halfHeight]   // NW
+            [-halfWidthKm, -halfHeightKm], // SW
+            [halfWidthKm, -halfHeightKm],  // SE
+            [halfWidthKm, halfHeightKm],   // NE
+            [-halfWidthKm, halfHeightKm]   // NW
         ];
 
-        // Rotate each corner around the center
+        // Rotate each corner around the center in km space
         const corners = [];
-        relativeCorners.forEach(([dx, dy]) => {
-            // Apply rotation matrix
-            const rotatedX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-            const rotatedY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
+        relativeCorners.forEach(([dxKm, dyKm]) => {
+            // Apply rotation matrix in km space (clockwise rotation)
+            const rotatedXKm = dxKm * Math.cos(angleRad) - dyKm * Math.sin(angleRad);
+            const rotatedYKm = dxKm * Math.sin(angleRad) + dyKm * Math.cos(angleRad);
 
-            // Convert back to absolute coordinates
-            const cornerLat = center.lat + rotatedY;
-            const cornerLng = center.lng + rotatedX;
+            // Convert the rotated km offsets back to lat/lng offsets
+            // For latitude: simple conversion (doesn't depend on longitude)
+            const latOffsetDeg = rotatedYKm / 111.32; // 1 degree lat ≈ 111.32 km
+
+            // For longitude: depends on latitude due to Earth's curvature
+            const latRadians = center.lat * (Math.PI / 180);
+            const lngOffsetDeg = rotatedXKm / (111.32 * Math.cos(latRadians));
+
+            // Calculate the final corner position
+            const cornerLat = center.lat + latOffsetDeg;
+            const cornerLng = center.lng + lngOffsetDeg;
 
             corners.push([cornerLat, cornerLng]);
         });
@@ -173,8 +189,8 @@ function updateRotationHandlePosition() {
     const vecX = topCenterPoint.x - centerPoint.x;
     const vecY = topCenterPoint.y - centerPoint.y;
 
-    // Apply rotation to this vector
-    const angle = -(window.rotationAngle || 0) * (Math.PI / 180); // Negative for screen coordinates
+    // Apply rotation to this vector (clockwise rotation)
+    const angle = (window.rotationAngle || 0) * (Math.PI / 180); // Positive for clockwise
     const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
     const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
 
@@ -275,8 +291,8 @@ function updateResizeHandlePosition() {
     const vecX = cornerPoint.x - centerPoint.x;
     const vecY = cornerPoint.y - centerPoint.y;
 
-    // Apply rotation to this vector
-    const angle = -(window.rotationAngle || 0) * (Math.PI / 180); // Negative for screen coordinates
+    // Apply rotation to this vector (clockwise rotation)
+    const angle = (window.rotationAngle || 0) * (Math.PI / 180); // Positive for clockwise
     const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
     const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
 
