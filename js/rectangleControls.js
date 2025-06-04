@@ -1,5 +1,77 @@
 // Handles rectangle creation and manipulation on the map
 
+// Create a rotatable rectangle class that extends L.Polygon
+const RotatableRectangle = L.Polygon.extend({
+    initialize: function (bounds, options) {
+        this._originalBounds = L.latLngBounds(bounds);
+        this._rotationAngle = 0;
+        const corners = this._calculateCorners(this._originalBounds, 0);
+        L.Polygon.prototype.initialize.call(this, corners, options);
+    },
+
+    // Add rectangle-like methods for compatibility
+    getBounds: function () {
+        return this._originalBounds;
+    },
+
+    setBounds: function (bounds) {
+        this._originalBounds = L.latLngBounds(bounds);
+        this._updateCorners();
+        return this;
+    },
+
+    setRotation: function (angle) {
+        this._rotationAngle = ((angle % 360) + 360) % 360; // Normalize to [0, 360)
+        window.rotationAngle = this._rotationAngle; // Keep global in sync
+        this._updateCorners();
+        return this;
+    },
+
+    getRotation: function () {
+        return this._rotationAngle;
+    },
+
+    _calculateCorners: function (bounds, angle) {
+        const center = bounds.getCenter();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        const halfWidth = (ne.lng - sw.lng) / 2;
+        const halfHeight = (ne.lat - sw.lat) / 2;
+
+        // Convert rotation angle to radians
+        const angleRad = angle * (Math.PI / 180);
+
+        // Define the four corners relative to center (before rotation)
+        const relativeCorners = [
+            [-halfWidth, -halfHeight], // SW
+            [halfWidth, -halfHeight],  // SE
+            [halfWidth, halfHeight],   // NE
+            [-halfWidth, halfHeight]   // NW
+        ];
+
+        // Rotate each corner around the center
+        const corners = [];
+        relativeCorners.forEach(([dx, dy]) => {
+            // Apply rotation matrix
+            const rotatedX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+            const rotatedY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
+
+            // Convert back to absolute coordinates
+            const cornerLat = center.lat + rotatedY;
+            const cornerLng = center.lng + rotatedX;
+
+            corners.push([cornerLat, cornerLng]);
+        });
+
+        return corners;
+    },
+
+    _updateCorners: function () {
+        const corners = this._calculateCorners(this._originalBounds, this._rotationAngle);
+        this.setLatLngs(corners);
+    }
+});
+
 // Create a rectangle using initial bounds calculated from mapSetup parameters
 const initialBounds = calculateBoundsFromOriginAndExtents(
     initialOriginLat,
@@ -8,7 +80,7 @@ const initialBounds = calculateBoundsFromOriginAndExtents(
     initialExtentY
 );
 
-const rectangle = L.rectangle(initialBounds, {
+const rectangle = new RotatableRectangle(initialBounds, {
     color: "#ff7800",
     weight: 2,
     fillOpacity: 0.2
@@ -151,27 +223,12 @@ function applyRotation() {
     // Check for rectangle existence
     if (!rectangle) return;
 
-    // Sync local rotationAngle with global
+    // Sync local rotationAngle with global and apply to rectangle
     rotationAngle = window.rotationAngle || 0;
+    rectangle.setRotation(rotationAngle);
 
-    const center = rectangle.getBounds().getCenter();
-    rectangleCenter = center;
-
-    // Check for rectangle._path before applying styles
-    if (rectangle._path) {
-        // Apply rotation transformation using relative coordinates
-        // This ensures rotation works correctly at any zoom level
-        rectangle._path.style.transformOrigin = '50% 50%';
-        rectangle._path.style.transform = `rotate(${window.rotationAngle}deg)`;
-    } else {
-        console.warn("Rectangle path not found during applyRotation.");
-    }
-
-
-    // Update rotation handle position
+    // Update handle positions
     updateRotationHandlePosition();
-
-    // Update resize handle position
     updateResizeHandlePosition();
 }
 
@@ -293,17 +350,18 @@ map.on('mousemove', function (e) {
         // Calculate the movement delta
         const latDiff = currentLatLng.lat - lastPos.lat;
         const lonDiff = currentLatLng.lng - lastPos.lng; // lastPos is Leaflet LatLng
+
+        // Update rectangle position
         const currentBounds = rectangle.getBounds();
         const sw = currentBounds.getSouthWest();
         const ne = currentBounds.getNorthEast();
 
-        // Update rectangle position
         rectangle.setBounds([
-            [sw.lat + latDiff, sw.lng + lonDiff], // sw.lng is Leaflet LatLng
-            [ne.lat + latDiff, ne.lng + lonDiff], // ne.lng is Leaflet LatLng
+            [sw.lat + latDiff, sw.lng + lonDiff],
+            [ne.lat + latDiff, ne.lng + lonDiff],
         ]);
 
-        // Reapply rotation after moving
+        // Reapply rotation after moving (this will update handles)
         applyRotation();
 
         // Update form values
