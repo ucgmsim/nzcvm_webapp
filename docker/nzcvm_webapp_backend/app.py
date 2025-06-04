@@ -152,7 +152,7 @@ def list_geojson_files() -> Response:
         for file_path in GEOJSON_DIR.glob("*basins.geojson.gz"):
             geojson_files.append(file_path.name)
 
-        return jsonify({"files": sorted(geojson_files)})
+        return jsonify({"files": sorted(geojson_files, reverse=True)})
 
     except Exception as e:
         print(f"Error listing GeoJSON files: {e}")
