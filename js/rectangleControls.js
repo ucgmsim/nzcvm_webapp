@@ -333,9 +333,9 @@ map.on('mousemove', function (e) {
     const currentLatLng = e.latlng;
 
     if (isRotating && rectangleCenter && lastPos) { // lastPos is a Leaflet LatLng
-        // Calculate rotation angle (note the negative sign)
+        // Calculate rotation angle
         // Adapt the call to calculateAngle, as it now expects {lat, lon} objects
-        const angleDelta = -calculateAngle(
+        const angleDelta = calculateAngle(
             { lat: rectangleCenter.lat, lon: rectangleCenter.lng },
             { lat: lastPos.lat, lon: lastPos.lng },
             { lat: currentLatLng.lat, lon: currentLatLng.lng }
