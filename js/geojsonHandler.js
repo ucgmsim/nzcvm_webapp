@@ -8,7 +8,7 @@ let availableGeoJSONFiles = [];
 // Function to load available GeoJSON files from backend and populate dropdown
 async function loadAvailableGeoJSONFiles() {
     try {
-        const response = await fetch('/geojson/list');
+        const response = await fetch('geojson/list'); // Relative path since we're served from /nzcvm_webapp/
         if (!response.ok) {
             throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
@@ -109,7 +109,7 @@ function loadGeoJSONByModelVersion(filename) {
     console.log('Loading GeoJSON:', filename);
 
     // Fetch from backend
-    fetch(`/geojson/${filename}`)
+    fetch(`geojson/${filename}`) // Relative path since we're served from /nzcvm_webapp/
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
