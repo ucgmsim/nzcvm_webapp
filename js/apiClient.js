@@ -21,14 +21,7 @@ function getConfigurationDataForFile() {
         'EXTENT_ZMIN': parseFloat(document.getElementById('extent-zmin').value),
         'ORIGIN_ROT': parseFloat(document.getElementById('rotation').value),
         'EXTENT_Z_SPACING': parseFloat(document.getElementById('z-spacing').value),
-        'EXTENT_LATLON_SPACING': (() => {
-            // Convert XY spacing from km to degrees
-            const spacingKm = parseFloat(document.getElementById('xy-spacing').value);
-            const originLat = parseFloat(document.getElementById('origin-lat').value);
-            const spacingDegrees = kmToDegrees(spacingKm, originLat);
-            // Use the larger of lat/lon degrees to be conservative
-            return Math.max(spacingDegrees.lat, spacingDegrees.lon);
-        })(),
+        'EXTENT_LATLON_SPACING': parseFloat(document.getElementById('xy-spacing').value),
         'MIN_VS': parseFloat(document.getElementById('min-vs').value),
         'TOPO_TYPE': document.getElementById('topo-type').value,
         'OUTPUT_DIR': '/tmp/nzcvm_output' // Fixed path for config file download
@@ -156,14 +149,7 @@ async function generateModelAndDownload() {
         EXTENT_ZMAX: parseFloat(document.getElementById('extent-zmax').value),
         EXTENT_ZMIN: parseFloat(document.getElementById('extent-zmin').value),
         EXTENT_Z_SPACING: parseFloat(document.getElementById('z-spacing').value),
-        EXTENT_LATLON_SPACING: (() => {
-            // Convert XY spacing from km to degrees
-            const spacingKm = parseFloat(document.getElementById('xy-spacing').value);
-            const originLat = parseFloat(document.getElementById('origin-lat').value);
-            const spacingDegrees = kmToDegrees(spacingKm, originLat);
-            // Use the larger of lat/lon degrees to be conservative
-            return Math.max(spacingDegrees.lat, spacingDegrees.lon);
-        })(),
+        EXTENT_LATLON_SPACING: parseFloat(document.getElementById('xy-spacing').value),
         MIN_VS: parseFloat(document.getElementById('min-vs').value),
         TOPO_TYPE: document.getElementById('topo-type').value
         // OUTPUT_DIR removed - now handled by backend

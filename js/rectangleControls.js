@@ -358,8 +358,8 @@ function updateResizeHandlesPosition() {
         const sideIcon = L.divIcon({
             className: `side-resize-handle-icon ${(position === 'left' || position === 'right') ? 'horizontal' : 'vertical'}`,
             html: '<div class="side-resize-icon"></div>',
-            iconSize: [10, 10],
-            iconAnchor: [5, 5]
+            iconSize: [6, 6],
+            iconAnchor: [3, 3]
         });
 
         const handle = L.marker(latLng, {

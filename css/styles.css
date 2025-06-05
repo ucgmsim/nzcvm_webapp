@@ -162,52 +162,20 @@ h2 {
     color: white;
 }
 
-/* Styles for corner resize handles */
-.corner-resize-handle-icon {
-    cursor: nwse-resize;
-}
-
-.corner-resize-icon {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: #3498db;
-    border: 2px solid white;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-    position: relative;
-}
-
-.corner-resize-icon:before {
-    content: "⤡";
-    position: absolute;
-    top: -2px;
-    left: 1px;
-    font-size: 10px;
-    color: white;
-}
-
 /* Styles for side resize handles */
 .side-resize-handle-icon {
-    cursor: ew-resize;
+    cursor: move;
+    /* Default cursor, will be overridden by specific classes */
 }
 
 .side-resize-icon {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background-color: #27ae60;
-    border: 2px solid white;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background-color: #ff7800;
+    border: 1px solid white;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
     position: relative;
-}
-
-.side-resize-icon:before {
-    content: "▬";
-    position: absolute;
-    top: -3px;
-    left: -1px;
-    font-size: 8px;
-    color: white;
 }
 
 /* Dynamic cursor styles for different side handles */
