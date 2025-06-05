@@ -110,13 +110,28 @@ let rotationHandle = null;
 let rotationLine = null;
 let rotationHandleDistance = 50; // pixels
 
-// Variables for resize handle
-let resizeHandle = null;
-let resizeLine = null;
+// Variables for resize handles
+let resizeHandles = {
+    corners: {
+        topLeft: null,
+        topRight: null,
+        bottomLeft: null,
+        bottomRight: null
+    },
+    sides: {
+        top: null,
+        right: null,
+        bottom: null,
+        left: null
+    }
+};
 
 // Variables for resize operations
 let initialResizeHandlePos = null;
 let initialRectBounds = null;
+let activeResizeHandle = null;
+let resizeHandleType = null; // 'corner' or 'side'
+let resizeHandlePosition = null; // specific position like 'topLeft', 'top', etc.
 
 // Variables to track interaction state
 let isDragging = false;
@@ -135,12 +150,19 @@ const rotationIcon = L.divIcon({
     iconAnchor: [8, 8]
 });
 
-// Create resize handle icon
-const resizeIcon = L.divIcon({
-    className: 'resize-handle-icon',
-    html: '<div class="resize-icon"></div>',
-    iconSize: [16, 16],
-    iconAnchor: [8, 8]
+// Create resize handle icons for corners and sides
+const cornerResizeIcon = L.divIcon({
+    className: 'corner-resize-handle-icon',
+    html: '<div class="corner-resize-icon"></div>',
+    iconSize: [12, 12],
+    iconAnchor: [6, 6]
+});
+
+const sideResizeIcon = L.divIcon({
+    className: 'side-resize-handle-icon',
+    html: '<div class="side-resize-icon"></div>',
+    iconSize: [10, 10],
+    iconAnchor: [5, 5]
 });
 
 // Function to create and position the rotation handle
@@ -256,85 +278,163 @@ function applyRotation() {
 
     // Update handle positions
     updateRotationHandlePosition();
-    updateResizeHandlePosition();
+    updateResizeHandlesPosition();
 }
 
 // Make applyRotation globally accessible
 window.applyRotation = applyRotation;
 
-// Function to create and position the resize handle
-function createResizeHandle() {
-    if (resizeHandle) {
-        map.removeLayer(resizeHandle);
-    }
+// Function to create and position all resize handles
+function createResizeHandles() {
+    // Remove existing handles
+    removeAllResizeHandles();
 
-    if (resizeLine) {
-        map.removeLayer(resizeLine);
-    }
-
-    updateResizeHandlePosition();
+    updateResizeHandlesPosition();
 }
 
-// Function to update resize handle position when rectangle is moved or rotated
-function updateResizeHandlePosition() {
+// Function to remove all resize handles
+function removeAllResizeHandles() {
+    // Remove corner handles
+    Object.values(resizeHandles.corners).forEach(handle => {
+        if (handle) map.removeLayer(handle);
+    });
+
+    // Remove side handles  
+    Object.values(resizeHandles.sides).forEach(handle => {
+        if (handle) map.removeLayer(handle);
+    });
+
+    // Reset handle objects
+    resizeHandles.corners = {
+        topLeft: null,
+        topRight: null,
+        bottomLeft: null,
+        bottomRight: null
+    };
+    resizeHandles.sides = {
+        top: null,
+        right: null,
+        bottom: null,
+        left: null
+    };
+}
+
+// Function to update all resize handle positions when rectangle is moved or rotated
+function updateResizeHandlesPosition() {
     if (!rectangle) return;
 
-    // Remove existing handle and line if they exist
-    if (resizeHandle) {
-        map.removeLayer(resizeHandle);
-    }
-
-    if (resizeLine) {
-        map.removeLayer(resizeLine);
-    }
+    // Remove existing handles first
+    removeAllResizeHandles();
 
     const bounds = rectangle.getBounds();
     const center = bounds.getCenter();
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const nw = L.latLng(ne.lat, sw.lng);
+    const se = L.latLng(sw.lat, ne.lng);
 
-    // Calculate the top-right corner of the rectangle (before rotation)
-    const topRight = L.latLng(bounds.getNorth(), bounds.getEast());
-
-    // Apply rotation to this corner
+    // Calculate rotation angle
+    const angle = (window.rotationAngle || 0) * (Math.PI / 180);
     const centerPoint = map.latLngToLayerPoint(center);
-    const cornerPoint = map.latLngToLayerPoint(topRight);
 
-    // Calculate vector from center to corner
-    const vecX = cornerPoint.x - centerPoint.x;
-    const vecY = cornerPoint.y - centerPoint.y;
+    // Helper function to rotate a point around the center
+    function rotatePoint(point, centerPt, angleRad) {
+        const x = point.x - centerPt.x;
+        const y = point.y - centerPt.y;
+        const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
+        const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
+        return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
+    }
 
-    // Apply rotation to this vector (clockwise rotation)
-    const angle = (window.rotationAngle || 0) * (Math.PI / 180); // Positive for clockwise
-    const rotatedVecX = vecX * Math.cos(angle) - vecY * Math.sin(angle);
-    const rotatedVecY = vecX * Math.sin(angle) + vecY * Math.cos(angle);
+    // Calculate rotated corner positions
+    const corners = {
+        topLeft: rotatePoint(map.latLngToLayerPoint(nw), centerPoint, angle),
+        topRight: rotatePoint(map.latLngToLayerPoint(ne), centerPoint, angle),
+        bottomLeft: rotatePoint(map.latLngToLayerPoint(sw), centerPoint, angle),
+        bottomRight: rotatePoint(map.latLngToLayerPoint(se), centerPoint, angle)
+    };
 
-    // Calculate the rotated corner point
-    const rotatedCornerX = centerPoint.x + rotatedVecX;
-    const rotatedCornerY = centerPoint.y + rotatedVecY;
-    const rotatedCornerPoint = L.point(rotatedCornerX, rotatedCornerY);
-    const rotatedCorner = map.layerPointToLatLng(rotatedCornerPoint);
+    // Calculate rotated side midpoint positions
+    const sides = {
+        top: L.point(
+            (corners.topLeft.x + corners.topRight.x) / 2,
+            (corners.topLeft.y + corners.topRight.y) / 2
+        ),
+        right: L.point(
+            (corners.topRight.x + corners.bottomRight.x) / 2,
+            (corners.topRight.y + corners.bottomRight.y) / 2
+        ),
+        bottom: L.point(
+            (corners.bottomLeft.x + corners.bottomRight.x) / 2,
+            (corners.bottomLeft.y + corners.bottomRight.y) / 2
+        ),
+        left: L.point(
+            (corners.topLeft.x + corners.bottomLeft.x) / 2,
+            (corners.topLeft.y + corners.bottomLeft.y) / 2
+        )
+    };
 
-    // Create the resize handle
-    resizeHandle = L.marker(rotatedCorner, {
-        icon: resizeIcon,
-        draggable: false,
-        zIndexOffset: 1000
-    }).addTo(map);
+    // Create corner handles
+    Object.keys(corners).forEach(position => {
+        const latLng = map.layerPointToLatLng(corners[position]);
+        const handle = L.marker(latLng, {
+            icon: cornerResizeIcon,
+            draggable: false,
+            zIndexOffset: 1000
+        }).addTo(map);
 
-    // Add mousedown handler to resize handle
-    resizeHandle.on('mousedown', function (e) {
-        isResizing = true;
-        lastPos = e.latlng;
-        map.dragging.disable(); // Disable map dragging while resizing
+        // Add mousedown handler
+        handle.on('mousedown', function (e) {
+            startResize(e, 'corner', position);
+        });
 
-        // Store initial handle position and rectangle bounds
-        initialResizeHandlePos = e.latlng;
-        initialRectBounds = rectangle.getBounds();
-        rectangleCenter = initialRectBounds.getCenter();
-
-        // Prevent event propagation
-        L.DomEvent.stopPropagation(e);
-        L.DomEvent.preventDefault(e);
+        resizeHandles.corners[position] = handle;
     });
+
+    // Create side handles
+    Object.keys(sides).forEach(position => {
+        const latLng = map.layerPointToLatLng(sides[position]);
+
+        // Create a modified icon with appropriate cursor class
+        const sideIcon = L.divIcon({
+            className: `side-resize-handle-icon ${(position === 'left' || position === 'right') ? 'horizontal' : 'vertical'}`,
+            html: '<div class="side-resize-icon"></div>',
+            iconSize: [10, 10],
+            iconAnchor: [5, 5]
+        });
+
+        const handle = L.marker(latLng, {
+            icon: sideIcon,
+            draggable: false,
+            zIndexOffset: 1000
+        }).addTo(map);
+
+        // Add mousedown handler
+        handle.on('mousedown', function (e) {
+            startResize(e, 'side', position);
+        });
+
+        resizeHandles.sides[position] = handle;
+    });
+}
+
+// Helper function to start resize operation
+function startResize(e, handleType, handlePosition) {
+    isResizing = true;
+    lastPos = e.latlng;
+    map.dragging.disable();
+
+    // Store resize operation details
+    activeResizeHandle = e.target;
+    resizeHandleType = handleType;
+    resizeHandlePosition = handlePosition;
+    initialResizeHandlePos = e.latlng;
+    initialRectBounds = rectangle.getBounds();
+    rectangleCenter = initialRectBounds.getCenter();
+
+    // Prevent event propagation
+    L.DomEvent.stopPropagation(e);
+    L.DomEvent.preventDefault(e);
 }
 
 // Make rectangle interactive
@@ -394,60 +494,12 @@ map.on('mousemove', function (e) {
         // Update form values
         updateFormValues();
     } else if (isResizing && rectangleCenter && initialResizeHandlePos && initialRectBounds) {
-        // Get current mouse position and initial handle position in screen coordinates
-        const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
-        const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos); // initialResizeHandlePos is Leaflet LatLng
-        const centerPoint = map.latLngToContainerPoint(rectangleCenter); // rectangleCenter is Leaflet LatLng
-
-        // Calculate rotation vectors once (optimization)
-        const angle = (window.rotationAngle || 0) * Math.PI / 180;
-        const cosAngle = Math.cos(angle);
-        const sinAngle = Math.sin(angle);
-
-        // Calculate mouse movement vector
-        const dx = currentMousePoint.x - initialMousePoint.x;
-        const dy = currentMousePoint.y - initialMousePoint.y;
-
-        // Project mouse movement onto the rotated axes of the rectangle
-        const projectionOnWidth = dx * cosAngle + dy * sinAngle;
-        const projectionOnHeight = -(dx * -sinAngle + dy * cosAngle);
-
-        // Get initial rectangle dimensions
-        const origSW = initialRectBounds.getSouthWest();
-        const origNE = initialRectBounds.getNorthEast();
-        const origSWPoint = map.latLngToContainerPoint(origSW);
-        const origNEPoint = map.latLngToContainerPoint(origNE);
-        const initialWidth = origNEPoint.x - origSWPoint.x;
-        const initialHeight = origSWPoint.y - origNEPoint.y;
-
-        // Calculate scale factors with minimum scale limit
-        const minScale = 0.05;
-        let scaleX = Math.max((initialWidth + projectionOnWidth) / initialWidth || 1, minScale);
-        let scaleY = Math.max((initialHeight + projectionOnHeight) / initialHeight || 1, minScale);
-
-        // Calculate new bounds
-        const center = initialRectBounds.getCenter(); // Leaflet LatLng
-        const width = Math.abs(origNE.lng - origSW.lng) * scaleX; // .lng from Leaflet LatLng
-        const height = Math.abs(origNE.lat - origSW.lat) * scaleY;
-        const halfWidthLon = width / 2;
-        const halfHeightLat = height / 2;
-
-        const newBounds = L.latLngBounds(
-            L.latLng(center.lat - halfHeightLat, center.lng - halfWidthLon), // center.lng from Leaflet
-            L.latLng(center.lat + halfHeightLat, center.lng + halfWidthLon)  // center.lng from Leaflet
-        );
-        rectangle.setBounds(newBounds);
-
-        // Update the resize handle position
-        if (resizeHandle) {
-            resizeHandle.setLatLng(currentLatLng);
+        // Handle different resize modes based on handle type and position
+        if (resizeHandleType === 'corner') {
+            handleCornerResize(currentLatLng);
+        } else if (resizeHandleType === 'side') {
+            handleSideResize(currentLatLng);
         }
-
-        // Reapply rotation
-        applyRotation();
-
-        // Update form values
-        updateFormValues();
     }
 
     // Update last position
@@ -463,6 +515,13 @@ map.on('mouseup', function () {
     isResizing = false;
     isRotating = false;
     lastPos = null;
+
+    // Clear resize state
+    activeResizeHandle = null;
+    resizeHandleType = null;
+    resizeHandlePosition = null;
+    initialResizeHandlePos = null;
+    initialRectBounds = null;
 
     // Re-enable map dragging
     map.dragging.enable();
@@ -482,7 +541,7 @@ map.on('layeradd', function (e) {
         setTimeout(function () {
             applyRotation();
             createRotationHandle();
-            createResizeHandle();
+            createResizeHandles();
         }, 100);
     }
 });
@@ -510,3 +569,150 @@ setTimeout(function () {
         applyRotation(); // Apply initial rotation/styles and create handles
     }
 }, 500); // Use a delay to allow Leaflet to render first
+
+// Handle corner resize - keeps opposite corner fixed
+function handleCornerResize(currentLatLng) {
+    const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
+    const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
+
+    // Get the original bounds and calculate corner positions
+    const origSW = initialRectBounds.getSouthWest();
+    const origNE = initialRectBounds.getNorthEast();
+    const origNW = L.latLng(origNE.lat, origSW.lng);
+    const origSE = L.latLng(origSW.lat, origNE.lng);
+
+    // Determine which corner is being dragged and which should stay fixed
+    let fixedCorner, movingCorner;
+
+    switch (resizeHandlePosition) {
+        case 'topLeft':
+            fixedCorner = origSE;
+            movingCorner = origNW;
+            break;
+        case 'topRight':
+            fixedCorner = origSW;
+            movingCorner = origNE;
+            break;
+        case 'bottomLeft':
+            fixedCorner = origNE;
+            movingCorner = origSW;
+            break;
+        case 'bottomRight':
+            fixedCorner = origNW;
+            movingCorner = origSE;
+            break;
+    }
+
+    // Calculate the mouse movement in screen coordinates
+    const dx = currentMousePoint.x - initialMousePoint.x;
+    const dy = currentMousePoint.y - initialMousePoint.y;
+
+    // Convert the moving corner to screen coordinates and apply movement
+    const movingCornerPoint = map.latLngToContainerPoint(movingCorner);
+    const newMovingCornerPoint = L.point(
+        movingCornerPoint.x + dx,
+        movingCornerPoint.y + dy
+    );
+    const newMovingCorner = map.containerPointToLatLng(newMovingCornerPoint);
+
+    // Create new bounds from fixed corner and new moving corner
+    const newBounds = L.latLngBounds([fixedCorner, newMovingCorner]);
+
+    // Apply minimum size constraints
+    const minSize = 0.001; // Minimum size in degrees
+    if (Math.abs(newBounds.getEast() - newBounds.getWest()) < minSize ||
+        Math.abs(newBounds.getNorth() - newBounds.getSouth()) < minSize) {
+        return; // Don't update if too small
+    }
+
+    rectangle.setBounds(newBounds);
+
+    // Reapply rotation
+    applyRotation();
+
+    // Update form values
+    updateFormValues();
+}
+
+// Handle side resize - keeps opposite side fixed
+function handleSideResize(currentLatLng) {
+    const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
+    const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
+
+    // Calculate movement delta in screen coordinates
+    const dx = currentMousePoint.x - initialMousePoint.x;
+    const dy = currentMousePoint.y - initialMousePoint.y;
+
+    // Get the original bounds
+    const origSW = initialRectBounds.getSouthWest();
+    const origNE = initialRectBounds.getNorthEast();
+
+    // Get center point for calculations
+    const center = initialRectBounds.getCenter();
+    const centerPoint = map.latLngToContainerPoint(center);
+
+    // Handle rotation - project movement along the correct axis
+    const angle = (window.rotationAngle || 0) * Math.PI / 180;
+
+    let newSW = L.latLng(origSW.lat, origSW.lng);
+    let newNE = L.latLng(origNE.lat, origNE.lng);
+
+    switch (resizeHandlePosition) {
+        case 'top': {
+            // For top side, project movement in the rotated "up" direction
+            // Moving up (negative dy) should expand north boundary (positive deltaLat)
+            const projectedMovement = dy * Math.cos(angle) - dx * Math.sin(angle);
+            const movementLatLng = map.containerPointToLatLng(L.point(0, -projectedMovement));
+            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
+            const deltaLat = movementLatLng.lat - originLatLng.lat;
+            newNE = L.latLng(origNE.lat + deltaLat, origNE.lng);
+            break;
+        }
+        case 'bottom': {
+            // For bottom side, project movement in the rotated "down" direction  
+            const projectedMovement = dy * Math.cos(angle) - dx * Math.sin(angle);
+            const movementLatLng = map.containerPointToLatLng(L.point(0, projectedMovement));
+            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
+            const deltaLat = movementLatLng.lat - originLatLng.lat;
+            newSW = L.latLng(origSW.lat + deltaLat, origSW.lng);
+            break;
+        }
+        case 'left': {
+            // For left side, project movement in the rotated "left" direction
+            // Moving left (negative dx) should expand west boundary (negative deltaLng)
+            const projectedMovement = dx * Math.cos(angle) + dy * Math.sin(angle);
+            const movementLatLng = map.containerPointToLatLng(L.point(-projectedMovement, 0));
+            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
+            const deltaLng = movementLatLng.lng - originLatLng.lng;
+            newSW = L.latLng(origSW.lat, origSW.lng + deltaLng);
+            break;
+        }
+        case 'right': {
+            // For right side, project movement in the rotated "right" direction
+            const projectedMovement = dx * Math.cos(angle) + dy * Math.sin(angle);
+            const movementLatLng = map.containerPointToLatLng(L.point(projectedMovement, 0));
+            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
+            const deltaLng = movementLatLng.lng - originLatLng.lng;
+            newNE = L.latLng(origNE.lat, origNE.lng + deltaLng);
+            break;
+        }
+    }
+
+    // Create new bounds
+    const newBounds = L.latLngBounds([newSW, newNE]);
+
+    // Apply minimum size constraints
+    const minSize = 0.001; // Minimum size in degrees
+    if (Math.abs(newBounds.getEast() - newBounds.getWest()) < minSize ||
+        Math.abs(newBounds.getNorth() - newBounds.getSouth()) < minSize) {
+        return; // Don't update if too small
+    }
+
+    rectangle.setBounds(newBounds);
+
+    // Reapply rotation
+    applyRotation();
+
+    // Update form values
+    updateFormValues();
+}

@@ -162,14 +162,14 @@ h2 {
     color: white;
 }
 
-/* Styles for resize handle */
-.resize-handle-icon {
+/* Styles for corner resize handles */
+.corner-resize-handle-icon {
     cursor: nwse-resize;
 }
 
-.resize-icon {
-    width: 16px;
-    height: 16px;
+.corner-resize-icon {
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background-color: #3498db;
     border: 2px solid white;
@@ -177,13 +177,48 @@ h2 {
     position: relative;
 }
 
-.resize-icon:before {
+.corner-resize-icon:before {
     content: "⤡";
     position: absolute;
-    top: -1px;
-    left: 2px;
-    font-size: 14px;
+    top: -2px;
+    left: 1px;
+    font-size: 10px;
     color: white;
+}
+
+/* Styles for side resize handles */
+.side-resize-handle-icon {
+    cursor: ew-resize;
+}
+
+.side-resize-icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background-color: #27ae60;
+    border: 2px solid white;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.side-resize-icon:before {
+    content: "▬";
+    position: absolute;
+    top: -3px;
+    left: -1px;
+    font-size: 8px;
+    color: white;
+}
+
+/* Dynamic cursor styles for different side handles */
+.side-resize-handle-icon.horizontal {
+    cursor: ew-resize;
+    /* East-west resize cursor for left/right sides */
+}
+
+.side-resize-handle-icon.vertical {
+    cursor: ns-resize;
+    /* North-south resize cursor for top/bottom sides */
 }
 
 #location-upload-panel {
