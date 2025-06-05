@@ -154,6 +154,10 @@ async function generateModelAndDownload() {
 
 
     try {
+        // Create AbortController for timeout handling (3600 seconds = 1 hour)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3600000); // 3600 seconds * 1000 ms
+
         // Send data to backend API endpoint
         const response = await fetch('run-nzcvm', { // Relative path since we're served from /nzcvm_webapp/
             method: 'POST',
@@ -161,7 +165,11 @@ async function generateModelAndDownload() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(formData),
+            signal: controller.signal,
         });
+
+        // Clear the timeout since request completed
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             // Clear timer on network error before throwing
@@ -216,7 +224,13 @@ async function generateModelAndDownload() {
             countdownIntervalId = null;
         }
         console.error('Error generating model:', error);
-        statusMessage.textContent = `Error: ${error.message}`; // Display detailed error
+
+        // Handle timeout specifically
+        if (error.name === 'AbortError') {
+            statusMessage.textContent = 'Error: Request timed out after 1 hour. The model generation process may be taking longer than expected.';
+        } else {
+            statusMessage.textContent = `Error: ${error.message}`; // Display detailed error
+        }
         statusMessage.style.color = 'red';
     }
 }

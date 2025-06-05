@@ -8,7 +8,15 @@ let availableGeoJSONFiles = [];
 // Function to load available GeoJSON files from backend and populate dropdown
 async function loadAvailableGeoJSONFiles() {
     try {
-        const response = await fetch('geojson/list'); // Relative path since we're served from /nzcvm_webapp/
+        // Create AbortController for timeout handling (30 seconds for file list)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch('geojson/list', { // Relative path since we're served from /nzcvm_webapp/
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
         if (!response.ok) {
             throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
@@ -20,7 +28,11 @@ async function loadAvailableGeoJSONFiles() {
 
     } catch (error) {
         console.error('Error loading available GeoJSON files:', error);
-        alert('Failed to load available GeoJSON files from backend. Please check your connection.');
+        if (error.name === 'AbortError') {
+            alert('Request timed out while loading available GeoJSON files. Please try again.');
+        } else {
+            alert('Failed to load available GeoJSON files from backend. Please check your connection.');
+        }
     }
 }
 
@@ -93,9 +105,16 @@ function loadGeoJSONByModelVersion(filename) {
 
     console.log('Loading GeoJSON:', filename);
 
+    // Create AbortController for timeout handling (60 seconds for GeoJSON data)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
     // Fetch from backend
-    fetch(`geojson/${filename}`) // Relative path since we're served from /nzcvm_webapp/
+    fetch(`geojson/${filename}`, { // Relative path since we're served from /nzcvm_webapp/
+        signal: controller.signal
+    })
         .then(response => {
+            clearTimeout(timeoutId);
             if (!response.ok) {
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
             }
@@ -140,7 +159,12 @@ function loadGeoJSONByModelVersion(filename) {
             if (loadingIndicator) {
                 loadingIndicator.remove();
             }
-            alert(`Error loading GeoJSON: ${errorMsg}. Please check console for details.`);
+
+            if (error.name === 'AbortError') {
+                alert('Request timed out while loading GeoJSON data. Please try again.');
+            } else {
+                alert(`Error loading GeoJSON: ${errorMsg}. Please check console for details.`);
+            }
         });
 }
 
