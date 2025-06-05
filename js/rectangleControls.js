@@ -1,7 +1,14 @@
 // Handles rectangle creation and manipulation on the map
 
-// Create a rotatable rectangle class that extends L.Polygon
-const RotatableRectangle = L.Polygon.extend({
+// Create a rotatable rectangle class that extends L.// Store resize handles
+const resizeHandles = {
+    sides: {
+        top: null,
+        right: null,
+        bottom: null,
+        left: null
+    }
+}; otatableRectangle = L.Polygon.extend({
     initialize: function (bounds, options) {
         this._originalBounds = L.latLngBounds(bounds);
         this._rotationAngle = 0;
@@ -110,21 +117,7 @@ let rotationHandle = null;
 let rotationLine = null;
 let rotationHandleDistance = 50; // pixels
 
-// Variables for resize handles
-let resizeHandles = {
-    corners: {
-        topLeft: null,
-        topRight: null,
-        bottomLeft: null,
-        bottomRight: null
-    },
-    sides: {
-        top: null,
-        right: null,
-        bottom: null,
-        left: null
-    }
-};
+// Note: resizeHandles is declared at the top of the file
 
 // Variables for resize operations
 let initialResizeHandlePos = null;
@@ -150,14 +143,7 @@ const rotationIcon = L.divIcon({
     iconAnchor: [8, 8]
 });
 
-// Create resize handle icons for corners and sides
-const cornerResizeIcon = L.divIcon({
-    className: 'corner-resize-handle-icon',
-    html: '<div class="corner-resize-icon"></div>',
-    iconSize: [12, 12],
-    iconAnchor: [6, 6]
-});
-
+// Create resize handle icons for sides
 const sideResizeIcon = L.divIcon({
     className: 'side-resize-handle-icon',
     html: '<div class="side-resize-icon"></div>',
@@ -294,23 +280,12 @@ function createResizeHandles() {
 
 // Function to remove all resize handles
 function removeAllResizeHandles() {
-    // Remove corner handles
-    Object.values(resizeHandles.corners).forEach(handle => {
-        if (handle) map.removeLayer(handle);
-    });
-
     // Remove side handles  
     Object.values(resizeHandles.sides).forEach(handle => {
         if (handle) map.removeLayer(handle);
     });
 
     // Reset handle objects
-    resizeHandles.corners = {
-        topLeft: null,
-        topRight: null,
-        bottomLeft: null,
-        bottomRight: null
-    };
     resizeHandles.sides = {
         top: null,
         right: null,
@@ -346,50 +321,31 @@ function updateResizeHandlesPosition() {
         return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
     }
 
-    // Calculate rotated corner positions
-    const corners = {
-        topLeft: rotatePoint(map.latLngToLayerPoint(nw), centerPoint, angle),
-        topRight: rotatePoint(map.latLngToLayerPoint(ne), centerPoint, angle),
-        bottomLeft: rotatePoint(map.latLngToLayerPoint(sw), centerPoint, angle),
-        bottomRight: rotatePoint(map.latLngToLayerPoint(se), centerPoint, angle)
-    };
+    // Calculate side midpoint positions for rotated rectangle
+    const nwPoint = rotatePoint(map.latLngToLayerPoint(nw), centerPoint, angle);
+    const nePoint = rotatePoint(map.latLngToLayerPoint(ne), centerPoint, angle);
+    const swPoint = rotatePoint(map.latLngToLayerPoint(sw), centerPoint, angle);
+    const sePoint = rotatePoint(map.latLngToLayerPoint(se), centerPoint, angle);
 
     // Calculate rotated side midpoint positions
     const sides = {
         top: L.point(
-            (corners.topLeft.x + corners.topRight.x) / 2,
-            (corners.topLeft.y + corners.topRight.y) / 2
+            (nwPoint.x + nePoint.x) / 2,
+            (nwPoint.y + nePoint.y) / 2
         ),
         right: L.point(
-            (corners.topRight.x + corners.bottomRight.x) / 2,
-            (corners.topRight.y + corners.bottomRight.y) / 2
+            (nePoint.x + sePoint.x) / 2,
+            (nePoint.y + sePoint.y) / 2
         ),
         bottom: L.point(
-            (corners.bottomLeft.x + corners.bottomRight.x) / 2,
-            (corners.bottomLeft.y + corners.bottomRight.y) / 2
+            (swPoint.x + sePoint.x) / 2,
+            (swPoint.y + sePoint.y) / 2
         ),
         left: L.point(
-            (corners.topLeft.x + corners.bottomLeft.x) / 2,
-            (corners.topLeft.y + corners.bottomLeft.y) / 2
+            (nwPoint.x + swPoint.x) / 2,
+            (nwPoint.y + swPoint.y) / 2
         )
     };
-
-    // Create corner handles
-    Object.keys(corners).forEach(position => {
-        const latLng = map.layerPointToLatLng(corners[position]);
-        const handle = L.marker(latLng, {
-            icon: cornerResizeIcon,
-            draggable: false,
-            zIndexOffset: 1000
-        }).addTo(map);
-
-        // Add mousedown handler
-        handle.on('mousedown', function (e) {
-            startResize(e, 'corner', position);
-        });
-
-        resizeHandles.corners[position] = handle;
-    });
 
     // Create side handles
     Object.keys(sides).forEach(position => {
@@ -494,10 +450,8 @@ map.on('mousemove', function (e) {
         // Update form values
         updateFormValues();
     } else if (isResizing && rectangleCenter && initialResizeHandlePos && initialRectBounds) {
-        // Handle different resize modes based on handle type and position
-        if (resizeHandleType === 'corner') {
-            handleCornerResize(currentLatLng);
-        } else if (resizeHandleType === 'side') {
+        // Handle side resize
+        if (resizeHandleType === 'side') {
             handleSideResize(currentLatLng);
         }
     }
@@ -569,218 +523,6 @@ setTimeout(function () {
         applyRotation(); // Apply initial rotation/styles and create handles
     }
 }, 500); // Use a delay to allow Leaflet to render first
-
-// Handle corner resize - keeps opposite corner fixed
-function handleCornerResize(currentLatLng) {
-    const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
-    const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
-
-    // Calculate mouse movement in screen coordinates
-    const dx = currentMousePoint.x - initialMousePoint.x;
-    const dy = currentMousePoint.y - initialMousePoint.y;
-
-    // If the rectangle is not rotated, use simple bounds-based resizing
-    if (Math.abs(window.rotationAngle || 0) < 0.01) {
-        // Get the original bounds
-        const origSW = initialRectBounds.getSouthWest();
-        const origNE = initialRectBounds.getNorthEast();
-        const origNW = L.latLng(origNE.lat, origSW.lng);
-        const origSE = L.latLng(origSW.lat, origNE.lng);
-
-        // Determine which corner is being dragged and which should stay fixed
-        let fixedCorner, movingCorner;
-        switch (resizeHandlePosition) {
-            case 'topLeft':
-                fixedCorner = origSE;
-                movingCorner = origNW;
-                break;
-            case 'topRight':
-                fixedCorner = origSW;
-                movingCorner = origNE;
-                break;
-            case 'bottomLeft':
-                fixedCorner = origNE;
-                movingCorner = origSW;
-                break;
-            case 'bottomRight':
-                fixedCorner = origNW;
-                movingCorner = origSE;
-                break;
-        }
-
-        // Convert the moving corner to screen coordinates and apply movement
-        const movingCornerPoint = map.latLngToContainerPoint(movingCorner);
-        const newMovingCornerPoint = L.point(
-            movingCornerPoint.x + dx,
-            movingCornerPoint.y + dy
-        );
-        const newMovingCorner = map.containerPointToLatLng(newMovingCornerPoint);
-
-        // Create new bounds from fixed corner and new moving corner
-        const newBounds = L.latLngBounds([fixedCorner, newMovingCorner]);
-
-        // Apply minimum size constraints
-        const minSize = 0.001; // Minimum size in degrees
-        if (Math.abs(newBounds.getEast() - newBounds.getWest()) < minSize ||
-            Math.abs(newBounds.getNorth() - newBounds.getSouth()) < minSize) {
-            return; // Don't update if too small
-        }
-
-        rectangle.setBounds(newBounds);
-        updateFormValues();
-        return;
-    }
-
-    // For rotated rectangles, we need to work with the actual rotated corners
-    // Get the current rotated rectangle corners from the polygon points
-    const currentCorners = rectangle.getLatLngs()[0]; // First ring of the polygon
-
-    // The corners are in order: [SW, SE, NE, NW] after rotation
-    const currentSW = currentCorners[0];
-    const currentSE = currentCorners[1];
-    const currentNE = currentCorners[2];
-    const currentNW = currentCorners[3];
-
-    // Map handle positions to actual corner positions
-    let fixedCorner, movingCorner;
-    switch (resizeHandlePosition) {
-        case 'topLeft':
-            fixedCorner = currentSE;    // bottom-right stays fixed
-            movingCorner = currentNW;   // top-left moves
-            break;
-        case 'topRight':
-            fixedCorner = currentSW;    // bottom-left stays fixed  
-            movingCorner = currentNE;   // top-right moves
-            break;
-        case 'bottomLeft':
-            fixedCorner = currentNE;    // top-right stays fixed
-            movingCorner = currentSW;   // bottom-left moves
-            break;
-        case 'bottomRight':
-            fixedCorner = currentNW;    // top-left stays fixed
-            movingCorner = currentSE;   // bottom-right moves
-            break;
-    }
-
-    // Convert to screen coordinates
-    const fixedPoint = map.latLngToContainerPoint(fixedCorner);
-    const movingPoint = map.latLngToContainerPoint(movingCorner);
-
-    // Calculate new position of the moving corner
-    const newMovingPoint = L.point(
-        movingPoint.x + dx,
-        movingPoint.y + dy
-    );
-
-    // Get the other two corners to form the complete rectangle
-    let otherCorner1, otherCorner2;
-    switch (resizeHandlePosition) {
-        case 'topLeft':
-            otherCorner1 = currentSW;   // bottom-left
-            otherCorner2 = currentNE;   // top-right
-            break;
-        case 'topRight':
-            otherCorner1 = currentNW;   // top-left
-            otherCorner2 = currentSE;   // bottom-right
-            break;
-        case 'bottomLeft':
-            otherCorner1 = currentNW;   // top-left
-            otherCorner2 = currentSE;   // bottom-right
-            break;
-        case 'bottomRight':
-            otherCorner1 = currentSW;   // bottom-left
-            otherCorner2 = currentNE;   // top-right
-            break;
-    }
-
-    // Convert other corners to screen coordinates
-    const otherPoint1 = map.latLngToContainerPoint(otherCorner1);
-    const otherPoint2 = map.latLngToContainerPoint(otherCorner2);
-
-    // Calculate the rectangle's local axes using the current rectangle orientation
-    // Vector from fixed corner to each adjacent corner
-    const axis1X = otherPoint1.x - fixedPoint.x;
-    const axis1Y = otherPoint1.y - fixedPoint.y;
-    const axis2X = otherPoint2.x - fixedPoint.x;
-    const axis2Y = otherPoint2.y - fixedPoint.y;
-
-    // Normalize the axes
-    const axis1Length = Math.sqrt(axis1X * axis1X + axis1Y * axis1Y);
-    const axis2Length = Math.sqrt(axis2X * axis2X + axis2Y * axis2Y);
-
-    if (axis1Length < 1 || axis2Length < 1) return; // Avoid division by zero
-
-    const axis1UnitX = axis1X / axis1Length;
-    const axis1UnitY = axis1Y / axis1Length;
-    const axis2UnitX = axis2X / axis2Length;
-    const axis2UnitY = axis2Y / axis2Length;
-
-    // Project the mouse movement onto the rectangle's local axes
-    const deltaX = newMovingPoint.x - fixedPoint.x;
-    const deltaY = newMovingPoint.y - fixedPoint.y;
-
-    const proj1 = deltaX * axis1UnitX + deltaY * axis1UnitY;
-    const proj2 = deltaX * axis2UnitX + deltaY * axis2UnitY;
-
-    // Apply minimum size constraints
-    const minSizePixels = 20;
-    if (Math.abs(proj1) < minSizePixels || Math.abs(proj2) < minSizePixels) {
-        return;
-    }
-
-    // Calculate new corner positions
-    const newOtherPoint1 = L.point(
-        fixedPoint.x + proj1 * axis1UnitX,
-        fixedPoint.y + proj1 * axis1UnitY
-    );
-
-    const newOtherPoint2 = L.point(
-        fixedPoint.x + proj2 * axis2UnitX,
-        fixedPoint.y + proj2 * axis2UnitY
-    );
-
-    const newOppositePoint = L.point(
-        fixedPoint.x + proj1 * axis1UnitX + proj2 * axis2UnitX,
-        fixedPoint.y + proj1 * axis1UnitY + proj2 * axis2UnitY
-    );
-
-    // Convert back to lat/lng
-    const newFixedCorner = fixedCorner; // This stays the same
-    const newOtherCorner1 = map.containerPointToLatLng(newOtherPoint1);
-    const newOtherCorner2 = map.containerPointToLatLng(newOtherPoint2);
-    const newOppositeCorner = map.containerPointToLatLng(newOppositePoint);
-
-    // Create new polygon with the updated corners in the correct order
-    let newCorners;
-    switch (resizeHandlePosition) {
-        case 'topLeft':
-            // Fixed: SE, Moving: NW, Others: SW, NE
-            newCorners = [newOtherCorner1, newFixedCorner, newOtherCorner2, newOppositeCorner]; // [SW, SE, NE, NW]
-            break;
-        case 'topRight':
-            // Fixed: SW, Moving: NE, Others: NW, SE  
-            newCorners = [newFixedCorner, newOtherCorner2, newOppositeCorner, newOtherCorner1]; // [SW, SE, NE, NW]
-            break;
-        case 'bottomLeft':
-            // Fixed: NE, Moving: SW, Others: NW, SE
-            newCorners = [newOppositeCorner, newOtherCorner2, newFixedCorner, newOtherCorner1]; // [SW, SE, NE, NW]
-            break;
-        case 'bottomRight':
-            // Fixed: NW, Moving: SE, Others: SW, NE
-            newCorners = [newOtherCorner1, newOppositeCorner, newOtherCorner2, newFixedCorner]; // [SW, SE, NE, NW]
-            break;
-    }
-
-    // Update the polygon directly with new corners
-    rectangle.setLatLngs([newCorners]);
-
-    // Calculate and update bounds for form values
-    const newBounds = L.latLngBounds(newCorners);
-    rectangle._originalBounds = newBounds;
-
-    // Update form values
-    updateFormValues();
-}
 
 // Handle side resize - keeps opposite side fixed
 function handleSideResize(currentLatLng) {
