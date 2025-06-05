@@ -7,89 +7,42 @@ throughout New Zealand.
 This repo contains all the files needed to set up this web app. Set up instructions
 are below.
 
-## Build and push images of the required Docker containers
+## Setting up the web app on `Mantle`
 
-These steps can be carried out on any machine that has Docker (i.e., they do not need to be carried out on the machine that will host the website).  
+### Creating a user account
 
-* Clone this repo
-    * `git clone https://github.com/ucgmsim/nzcvm_webapp.git /nzcvm_webapp`
+`Mantle` is a local server that runs most of our web applications. We will create a 
+user account on `Mantle` called `nzcvm_webapp` that will run the `nzcvm_webapp` service:
 
-* In a terminal, navigate to the top level of cloned repo  (where the file docker-compose.yaml is located). The location will depend on where you cloned the repo to
-    * e.g., `cd /home/username/nzcvm_webapp`
+ * `sudo useradd -m -s /bin/bash nzcvm_webapp` 
+ where `-m` creates a home directory, and `-s /bin/bash` sets bash as the default shell
+ * `sudo passwd nzcvm_webapp` to set a password
 
-* Build the Docker images
-    * `docker compose build .` (if any cached `nzcvm_webapp` source files can be kept)
+We will use `rootless docker` for this set up. If you need to install `rootless docker` 
+on your system, follow [this guide](https://docs.docker.com/engine/security/rootless/). 
+Otherwise, continue with the next step.
 
-    * `docker compose build . --no-cache` (if any cached `nzcvm_webapp` source files should be overwritten, for example if `nzcvm_webapp` has been updated)
+Access the `nzcvm_webapp` user's shell with
+  * `sudo machinectl shell nzcvm_webapp@`
 
-* Push the images to Docker Hub (see the section below on logging in to Docker Hub)
-    * `docker compose push`
+Now as the `nzcvm_webapp` user, run
+  * `dockerd-rootless-setuptool.sh install`
 
-## Create a dedicated user account on the host machine to run the service
+Add `export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock` to the `nzcvm_webapp` 
+user's `~/.bashrc` file to point to the Docker socket:
+  * `echo 'export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock' >> ~/.bashrc`
+* `source ~/.bashrc` (to reload the shell)
 
-This guide uses **Rootless Docker**, meaning that the Docker installation is for a specific user that does not require `sudo`. If you need to install Rootless Docker on your system, follow [this guide](https://docs.docker.com/engine/security/rootless/).
+And finally, start `docker` (`--now`) and set it to automatically start
+when the `nzcvm_webapp` user logs in (`enable`)
+  * `systemctl --user enable --now docker`
 
-* Create a user called `nzcvm_webapp` to run the systemd service
-    *  `sudo useradd -m -s /bin/bash nzcvm_webapp` where `-m` creates a home directory and `-s /bin/bash` sets the default shell to bash.
+Now we will log in to `Docker Hub` so we can `pull` the Docker container image 
+containing this web application. 
 
-* Add the following line to the `nzcvm_webapp` user's `~/.bashrc` file to point to the user's Docker socket
-    * `export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock`
+### Logging in to Docker Hub
+To start the log in process
 
-* Reload the shell
-    * `source ~/.bashrc`
-
-* Temporarily give the `nzcvm_webapp` user `sudo` privileges to make the next few steps simpler (`sudo` privileges will be revoked later)
-    *  `sudo usermod -aG sudo nzcvm_webapp`
-
-* Change to the `nzcvm_webapp` user
-    * e.g., `exit`
-    * e.g., `ssh nzcvm_webapp@mantle` (if hosting on Mantle)
-
-* Set the `nzcvm_webapp` user's Docker to start at startup and also start it now 
-    * `sudo systemctl enable --now docker` where `enable` sets Docker to start at startup and `--now` also starts it now.
-
-* Allow the `nzcvm_webapp` user to linger so it will be available at startup 
-    * `sudo loginctl enable-linger $(whoami)`
-
-* Create directories for the repo and NZCVM's data resources
-    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/repo`
-    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/nzcvm_data/`
-
-* Give the nzcvm_webapp user all permissions for these directories
-    * `sudo chown -R nzcvm_webapp:nzcvm_webapp /mnt/mantle_data/nzcvm_webapp`
-    * `sudo chmod -R u+rwx /mnt/mantle_data/nzcvm_webapp`
-
-* Copy the data resources required for the NZCVM code to `/mnt/mantle_data/nzcvm_webapp/nzcvm_data/`
-    * e.g., use rsync or sftp
-
-* Change to another account that has `sudo` privileges
-    * e.g., `exit`
-    * e.g., `ssh main_username@mantle`
-
-* Revoke the `nzcvm_webapp` user's `sudo` privileges as they are no longer needed 
-    * `sudo deluser nzcvm_webapp sudo`
-
-## Set up and start the systemd service file
-
-* Copy the `nzcvm_webapp.service` file to the host machine
-    * e.g., `cp nzcvm_webapp.service /etc/systemd/system/`
-* Reload the systemd unit files
-    *  `sudo systemctl daemon-reload`
-* Set the service to start on startup with `enable`
-    * `sudo systemctl enable nzcvm_webapp.service`
-
-* Start the service to pull the latest images from Docker Hub and run the containers
-    * `sudo systemctl start nzcvm_webapp.service` (if **not** already running)
-    * `sudo systemctl restart nzcvm_webapp.service` (if already running)
-
-* Check the status of the service to ensure it's running
-    * `sudo systemctl status nzcvm_webapp.service` 
-
-* Check the status of the `nzcvm_webapp` container (as the `nzcvm_webapp` user)
-    * `docker ps`
-
-## Logging in to Docker Hub
-Open a terminal and enter the following command:
 `docker login`
 
 The terminal will show a message like the following:
@@ -102,10 +55,67 @@ The terminal will show a message like the following:
 
     Waiting for authentication in the browser…
 
-If a web browser does not open automatically, copy the URL provided in the message and 
-paste it into a web browser. On the web page that opens, enter the one-time device 
-confirmation code provided in the message, and our organization's Docker Hub username 
-and password to log in.
+If a web browser does not open automatically, copy the URL provided in the message and paste it into a 
+web browser. On the web page that opens, enter the one-time device confirmation code provided in 
+the message, and our organization's Docker Hub username and password to log in. After logging in to `Docker Hub` as the `nzcvm_webapp` user, exit and return to your usual account by running
+  * `exit`
+
+### Web application set up
+
+* Create directories for the repo and NZCVM's required data resources
+    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/repo`
+    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/nzcvm_data/`
+
+* Give the `nzcvm_webapp` user all permissions for these directories
+    * `sudo chown -R nzcvm_webapp:nzcvm_webapp /mnt/mantle_data/nzcvm_webapp`
+    * `sudo chmod -R u+rwx /mnt/mantle_data/nzcvm_webapp`
+
+* Copy the data resources required for the NZCVM code to `/mnt/mantle_data/nzcvm_webapp/nzcvm_data/`
+    * e.g., use rsync or sftp
+
+Get the `nzcvm_webapp` user's User ID (UID)
+  * `id -u nzcvm_webapp`
+
+Ensure that this UID is in the place of 1010 in the following line of 
+[nzcvm_webapp.service](docker/nzcvm_webapp.service):
+  * `Environment="DOCKER_HOST=unix:///run/user/1010/docker.sock"`
+
+Now have `systemd` load the new unit file
+  * `sudo systemctl daemon-reload`
+
+And set the service to automatically start at start up
+  * `sudo systemctl enable nzcvm_webapp.service`
+
+The `nzcvm_webapp` user's Docker socket will normally only be available for running the 
+container if the `nzcvm_webapp` user is logged in. However, we can keep `nzcvm_webapp`'s docker
+socket active even if the `nzcvm_webapp` user is not logged in by enabling `linger` 
+for the `nzcvm_webapp` user
+  * `sudo loginctl enable-linger nzcvm_webapp`
+
+Finally, to start the service, and make the web app publicly available
+  * `cd /etc/systemd/system`
+  * `sudo systemctl start nzcvm_webapp.service`
+
+## Modifying the `nzcvm_webapp` web app
+
+If the the `nzcvm_webapp` web app is modified, a new Docker image that contains the modified
+`nzcvm_webapp` code needs to be built and pushed to Docker Hub. This can be done with any
+machine that has Docker.
+
+[`Dockerfile`](docker/Dockerfile) contains instructions for building the image of the 
+Docker container. To build the Docker container image, open a terminal and navigate to the 
+`docker` directory in the `nzcvm_webapp` repo 
+  * `cd /location/of/repo/docker/folder`
+
+The build process will try to re-use cached `nzcvm_webapp` files by default, so if the `nzcvm_webapp` 
+package has been modified, you should build with the `--no-cache` flag:
+ * `docker build --no-cache -t earthquakesuc/nzcvm_webapp .`
+
+ (If you can keep cached files, remove the `--no-cache` flag from the command)
+
+To push the newly built container image to Docker Hub, ensure you are logged in to
+our Docker Hub account (earthquakesuc), and then run
+  * `docker push earthquakesuc/nzcvm_webapp`
 
 ## File summaries
 
