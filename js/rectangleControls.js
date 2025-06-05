@@ -1,6 +1,6 @@
 // Handles rectangle creation and manipulation on the map
 
-// Create a rotatable rectangle class that extends L.// Store resize handles
+// Store resize handles
 const resizeHandles = {
     sides: {
         top: null,
@@ -8,7 +8,10 @@ const resizeHandles = {
         bottom: null,
         left: null
     }
-}; otatableRectangle = L.Polygon.extend({
+};
+
+// Create a rotatable rectangle class that extends L.Polygon
+const RotatableRectangle = L.Polygon.extend({
     initialize: function (bounds, options) {
         this._originalBounds = L.latLngBounds(bounds);
         this._rotationAngle = 0;
