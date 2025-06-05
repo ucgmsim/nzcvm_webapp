@@ -315,15 +315,6 @@ function updateResizeHandlesPosition() {
     const angle = (window.rotationAngle || 0) * (Math.PI / 180);
     const centerPoint = map.latLngToLayerPoint(center);
 
-    // Helper function to rotate a point around the center
-    function rotatePoint(point, centerPt, angleRad) {
-        const x = point.x - centerPt.x;
-        const y = point.y - centerPt.y;
-        const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
-        const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
-        return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
-    }
-
     // Calculate side midpoint positions for rotated rectangle
     const nwPoint = rotatePoint(map.latLngToLayerPoint(nw), centerPoint, angle);
     const nePoint = rotatePoint(map.latLngToLayerPoint(ne), centerPoint, angle);
@@ -547,15 +538,6 @@ function handleSideResize(currentLatLng) {
     const angle = (window.rotationAngle || 0) * Math.PI / 180;
     const centerPoint = map.latLngToContainerPoint(center);
 
-    // Helper function to rotate a point around center
-    function rotatePoint(point, centerPt, angleRad) {
-        const x = point.x - centerPt.x;
-        const y = point.y - centerPt.y;
-        const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
-        const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
-        return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
-    }
-
     // Get the current rotated corner positions in screen coordinates
     const rotatedCorners = {
         sw: rotatePoint(map.latLngToContainerPoint(origSW), centerPoint, angle),
@@ -647,15 +629,6 @@ function handleSideResize(currentLatLng) {
     const newCenterX = (newCorners.sw.x + newCorners.se.x + newCorners.ne.x + newCorners.nw.x) / 4;
     const newCenterY = (newCorners.sw.y + newCorners.se.y + newCorners.ne.y + newCorners.nw.y) / 4;
     const newCenterPoint = L.point(newCenterX, newCenterY);
-
-    // Calculate the new "unrotated" bounds by rotating the corners back
-    function unrotatePoint(point, centerPt, angleRad) {
-        const x = point.x - centerPt.x;
-        const y = point.y - centerPt.y;
-        const unrotatedX = x * Math.cos(-angleRad) - y * Math.sin(-angleRad);
-        const unrotatedY = x * Math.sin(-angleRad) + y * Math.cos(-angleRad);
-        return L.point(centerPt.x + unrotatedX, centerPt.y + unrotatedY);
-    }
 
     // Unrotate the new corners to get the underlying rectangle bounds
     const unrotatedCorners = {

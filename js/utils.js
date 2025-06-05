@@ -125,3 +125,21 @@ function calculateApproxRunTime(totalGridPoints) {
     // for several test runs on Mantle.
     return 33 + totalGridPoints * 2.6014383829e-5;
 }
+
+// Helper function to rotate a point around a center point
+function rotatePoint(point, centerPt, angleRad) {
+    const x = point.x - centerPt.x;
+    const y = point.y - centerPt.y;
+    const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
+    const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
+    return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
+}
+
+// Helper function to unrotate a point around a center point (inverse of rotatePoint)
+function unrotatePoint(point, centerPt, angleRad) {
+    const x = point.x - centerPt.x;
+    const y = point.y - centerPt.y;
+    const unrotatedX = x * Math.cos(-angleRad) - y * Math.sin(-angleRad);
+    const unrotatedY = x * Math.sin(-angleRad) + y * Math.cos(-angleRad);
+    return L.point(centerPt.x + unrotatedX, centerPt.y + unrotatedY);
+}

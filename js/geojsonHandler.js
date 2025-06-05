@@ -43,20 +43,6 @@ function populateModelVersionDropdown() {
         }
     });
 }
-function addLegend() {
-    if (legend) {
-        map.removeControl(legend);
-    }
-
-    legend = L.control({ position: 'bottomright' });
-    legend.onAdd = function () {
-        const div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = '<h4>Basin Regions</h4>' +
-            '<i style="background:#ba0045"></i> Basin Areas<br>';
-        return div;
-    };
-    legend.addTo(map);
-}
 
 // Function to add a legend to the map
 function addLegend() {
