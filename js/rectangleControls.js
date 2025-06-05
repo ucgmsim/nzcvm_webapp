@@ -635,6 +635,7 @@ function handleCornerResize(currentLatLng) {
 }
 
 // Handle side resize - keeps opposite side fixed
+// Handle side resize - keeps opposite side fixed
 function handleSideResize(currentLatLng) {
     const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
     const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
@@ -647,55 +648,32 @@ function handleSideResize(currentLatLng) {
     const origSW = initialRectBounds.getSouthWest();
     const origNE = initialRectBounds.getNorthEast();
 
-    // Get center point for calculations
-    const center = initialRectBounds.getCenter();
-    const centerPoint = map.latLngToContainerPoint(center);
-
-    // Handle rotation - project movement along the correct axis
-    const angle = (window.rotationAngle || 0) * Math.PI / 180;
+    // Convert mouse movement to lat/lng changes
+    const movementPoint = map.containerPointToLatLng(L.point(dx, dy));
+    const originPoint = map.containerPointToLatLng(L.point(0, 0));
+    const deltaLat = movementPoint.lat - originPoint.lat;
+    const deltaLng = movementPoint.lng - originPoint.lng;
 
     let newSW = L.latLng(origSW.lat, origSW.lng);
     let newNE = L.latLng(origNE.lat, origNE.lng);
 
     switch (resizeHandlePosition) {
-        case 'top': {
-            // For top side, project movement in the rotated "up" direction
-            // Moving up (negative dy) should expand north boundary (positive deltaLat)
-            const projectedMovement = dy * Math.cos(angle) - dx * Math.sin(angle);
-            const movementLatLng = map.containerPointToLatLng(L.point(0, -projectedMovement));
-            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
-            const deltaLat = movementLatLng.lat - originLatLng.lat;
+        case 'top':
+            // Move the north boundary - drag up increases north boundary
             newNE = L.latLng(origNE.lat + deltaLat, origNE.lng);
             break;
-        }
-        case 'bottom': {
-            // For bottom side, project movement in the rotated "down" direction  
-            const projectedMovement = dy * Math.cos(angle) - dx * Math.sin(angle);
-            const movementLatLng = map.containerPointToLatLng(L.point(0, projectedMovement));
-            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
-            const deltaLat = movementLatLng.lat - originLatLng.lat;
+        case 'bottom':
+            // Move the south boundary - drag down decreases south boundary
             newSW = L.latLng(origSW.lat + deltaLat, origSW.lng);
             break;
-        }
-        case 'left': {
-            // For left side, project movement in the rotated "left" direction
-            // Moving left (negative dx) should expand west boundary (negative deltaLng)
-            const projectedMovement = dx * Math.cos(angle) + dy * Math.sin(angle);
-            const movementLatLng = map.containerPointToLatLng(L.point(-projectedMovement, 0));
-            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
-            const deltaLng = movementLatLng.lng - originLatLng.lng;
+        case 'left':
+            // Move the west boundary - drag left decreases west boundary
             newSW = L.latLng(origSW.lat, origSW.lng + deltaLng);
             break;
-        }
-        case 'right': {
-            // For right side, project movement in the rotated "right" direction
-            const projectedMovement = dx * Math.cos(angle) + dy * Math.sin(angle);
-            const movementLatLng = map.containerPointToLatLng(L.point(projectedMovement, 0));
-            const originLatLng = map.containerPointToLatLng(L.point(0, 0));
-            const deltaLng = movementLatLng.lng - originLatLng.lng;
+        case 'right':
+            // Move the east boundary - drag right increases east boundary
             newNE = L.latLng(origNE.lat, origNE.lng + deltaLng);
             break;
-        }
     }
 
     // Create new bounds
