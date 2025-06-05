@@ -575,66 +575,213 @@ function handleCornerResize(currentLatLng) {
     const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
     const initialMousePoint = map.latLngToContainerPoint(initialResizeHandlePos);
 
-    // Get the original bounds and calculate corner positions
-    const origSW = initialRectBounds.getSouthWest();
-    const origNE = initialRectBounds.getNorthEast();
-    const origNW = L.latLng(origNE.lat, origSW.lng);
-    const origSE = L.latLng(origSW.lat, origNE.lng);
-
-    // Determine which corner is being dragged and which should stay fixed
-    let fixedCorner, movingCorner;
-
-    switch (resizeHandlePosition) {
-        case 'topLeft':
-            fixedCorner = origSE;
-            movingCorner = origNW;
-            break;
-        case 'topRight':
-            fixedCorner = origSW;
-            movingCorner = origNE;
-            break;
-        case 'bottomLeft':
-            fixedCorner = origNE;
-            movingCorner = origSW;
-            break;
-        case 'bottomRight':
-            fixedCorner = origNW;
-            movingCorner = origSE;
-            break;
-    }
-
-    // Calculate the mouse movement in screen coordinates
+    // Calculate mouse movement in screen coordinates
     const dx = currentMousePoint.x - initialMousePoint.x;
     const dy = currentMousePoint.y - initialMousePoint.y;
 
-    // Convert the moving corner to screen coordinates and apply movement
-    const movingCornerPoint = map.latLngToContainerPoint(movingCorner);
-    const newMovingCornerPoint = L.point(
-        movingCornerPoint.x + dx,
-        movingCornerPoint.y + dy
-    );
-    const newMovingCorner = map.containerPointToLatLng(newMovingCornerPoint);
+    // If the rectangle is not rotated, use simple bounds-based resizing
+    if (Math.abs(window.rotationAngle || 0) < 0.01) {
+        // Get the original bounds
+        const origSW = initialRectBounds.getSouthWest();
+        const origNE = initialRectBounds.getNorthEast();
+        const origNW = L.latLng(origNE.lat, origSW.lng);
+        const origSE = L.latLng(origSW.lat, origNE.lng);
 
-    // Create new bounds from fixed corner and new moving corner
-    const newBounds = L.latLngBounds([fixedCorner, newMovingCorner]);
+        // Determine which corner is being dragged and which should stay fixed
+        let fixedCorner, movingCorner;
+        switch (resizeHandlePosition) {
+            case 'topLeft':
+                fixedCorner = origSE;
+                movingCorner = origNW;
+                break;
+            case 'topRight':
+                fixedCorner = origSW;
+                movingCorner = origNE;
+                break;
+            case 'bottomLeft':
+                fixedCorner = origNE;
+                movingCorner = origSW;
+                break;
+            case 'bottomRight':
+                fixedCorner = origNW;
+                movingCorner = origSE;
+                break;
+        }
 
-    // Apply minimum size constraints
-    const minSize = 0.001; // Minimum size in degrees
-    if (Math.abs(newBounds.getEast() - newBounds.getWest()) < minSize ||
-        Math.abs(newBounds.getNorth() - newBounds.getSouth()) < minSize) {
-        return; // Don't update if too small
+        // Convert the moving corner to screen coordinates and apply movement
+        const movingCornerPoint = map.latLngToContainerPoint(movingCorner);
+        const newMovingCornerPoint = L.point(
+            movingCornerPoint.x + dx,
+            movingCornerPoint.y + dy
+        );
+        const newMovingCorner = map.containerPointToLatLng(newMovingCornerPoint);
+
+        // Create new bounds from fixed corner and new moving corner
+        const newBounds = L.latLngBounds([fixedCorner, newMovingCorner]);
+
+        // Apply minimum size constraints
+        const minSize = 0.001; // Minimum size in degrees
+        if (Math.abs(newBounds.getEast() - newBounds.getWest()) < minSize ||
+            Math.abs(newBounds.getNorth() - newBounds.getSouth()) < minSize) {
+            return; // Don't update if too small
+        }
+
+        rectangle.setBounds(newBounds);
+        updateFormValues();
+        return;
     }
 
-    rectangle.setBounds(newBounds);
+    // For rotated rectangles, we need to work with the actual rotated corners
+    // Get the current rotated rectangle corners from the polygon points
+    const currentCorners = rectangle.getLatLngs()[0]; // First ring of the polygon
 
-    // Reapply rotation
-    applyRotation();
+    // The corners are in order: [SW, SE, NE, NW] after rotation
+    const currentSW = currentCorners[0];
+    const currentSE = currentCorners[1];
+    const currentNE = currentCorners[2];
+    const currentNW = currentCorners[3];
+
+    // Map handle positions to actual corner positions
+    let fixedCorner, movingCorner;
+    switch (resizeHandlePosition) {
+        case 'topLeft':
+            fixedCorner = currentSE;    // bottom-right stays fixed
+            movingCorner = currentNW;   // top-left moves
+            break;
+        case 'topRight':
+            fixedCorner = currentSW;    // bottom-left stays fixed  
+            movingCorner = currentNE;   // top-right moves
+            break;
+        case 'bottomLeft':
+            fixedCorner = currentNE;    // top-right stays fixed
+            movingCorner = currentSW;   // bottom-left moves
+            break;
+        case 'bottomRight':
+            fixedCorner = currentNW;    // top-left stays fixed
+            movingCorner = currentSE;   // bottom-right moves
+            break;
+    }
+
+    // Convert to screen coordinates
+    const fixedPoint = map.latLngToContainerPoint(fixedCorner);
+    const movingPoint = map.latLngToContainerPoint(movingCorner);
+
+    // Calculate new position of the moving corner
+    const newMovingPoint = L.point(
+        movingPoint.x + dx,
+        movingPoint.y + dy
+    );
+
+    // Get the other two corners to form the complete rectangle
+    let otherCorner1, otherCorner2;
+    switch (resizeHandlePosition) {
+        case 'topLeft':
+            otherCorner1 = currentSW;   // bottom-left
+            otherCorner2 = currentNE;   // top-right
+            break;
+        case 'topRight':
+            otherCorner1 = currentNW;   // top-left
+            otherCorner2 = currentSE;   // bottom-right
+            break;
+        case 'bottomLeft':
+            otherCorner1 = currentNW;   // top-left
+            otherCorner2 = currentSE;   // bottom-right
+            break;
+        case 'bottomRight':
+            otherCorner1 = currentSW;   // bottom-left
+            otherCorner2 = currentNE;   // top-right
+            break;
+    }
+
+    // Convert other corners to screen coordinates
+    const otherPoint1 = map.latLngToContainerPoint(otherCorner1);
+    const otherPoint2 = map.latLngToContainerPoint(otherCorner2);
+
+    // Calculate the rectangle's local axes using the current rectangle orientation
+    // Vector from fixed corner to each adjacent corner
+    const axis1X = otherPoint1.x - fixedPoint.x;
+    const axis1Y = otherPoint1.y - fixedPoint.y;
+    const axis2X = otherPoint2.x - fixedPoint.x;
+    const axis2Y = otherPoint2.y - fixedPoint.y;
+
+    // Normalize the axes
+    const axis1Length = Math.sqrt(axis1X * axis1X + axis1Y * axis1Y);
+    const axis2Length = Math.sqrt(axis2X * axis2X + axis2Y * axis2Y);
+
+    if (axis1Length < 1 || axis2Length < 1) return; // Avoid division by zero
+
+    const axis1UnitX = axis1X / axis1Length;
+    const axis1UnitY = axis1Y / axis1Length;
+    const axis2UnitX = axis2X / axis2Length;
+    const axis2UnitY = axis2Y / axis2Length;
+
+    // Project the mouse movement onto the rectangle's local axes
+    const deltaX = newMovingPoint.x - fixedPoint.x;
+    const deltaY = newMovingPoint.y - fixedPoint.y;
+
+    const proj1 = deltaX * axis1UnitX + deltaY * axis1UnitY;
+    const proj2 = deltaX * axis2UnitX + deltaY * axis2UnitY;
+
+    // Apply minimum size constraints
+    const minSizePixels = 20;
+    if (Math.abs(proj1) < minSizePixels || Math.abs(proj2) < minSizePixels) {
+        return;
+    }
+
+    // Calculate new corner positions
+    const newOtherPoint1 = L.point(
+        fixedPoint.x + proj1 * axis1UnitX,
+        fixedPoint.y + proj1 * axis1UnitY
+    );
+
+    const newOtherPoint2 = L.point(
+        fixedPoint.x + proj2 * axis2UnitX,
+        fixedPoint.y + proj2 * axis2UnitY
+    );
+
+    const newOppositePoint = L.point(
+        fixedPoint.x + proj1 * axis1UnitX + proj2 * axis2UnitX,
+        fixedPoint.y + proj1 * axis1UnitY + proj2 * axis2UnitY
+    );
+
+    // Convert back to lat/lng
+    const newFixedCorner = fixedCorner; // This stays the same
+    const newOtherCorner1 = map.containerPointToLatLng(newOtherPoint1);
+    const newOtherCorner2 = map.containerPointToLatLng(newOtherPoint2);
+    const newOppositeCorner = map.containerPointToLatLng(newOppositePoint);
+
+    // Create new polygon with the updated corners in the correct order
+    let newCorners;
+    switch (resizeHandlePosition) {
+        case 'topLeft':
+            // Fixed: SE, Moving: NW, Others: SW, NE
+            newCorners = [newOtherCorner1, newFixedCorner, newOtherCorner2, newOppositeCorner]; // [SW, SE, NE, NW]
+            break;
+        case 'topRight':
+            // Fixed: SW, Moving: NE, Others: NW, SE  
+            newCorners = [newFixedCorner, newOtherCorner2, newOppositeCorner, newOtherCorner1]; // [SW, SE, NE, NW]
+            break;
+        case 'bottomLeft':
+            // Fixed: NE, Moving: SW, Others: NW, SE
+            newCorners = [newOppositeCorner, newOtherCorner2, newFixedCorner, newOtherCorner1]; // [SW, SE, NE, NW]
+            break;
+        case 'bottomRight':
+            // Fixed: NW, Moving: SE, Others: SW, NE
+            newCorners = [newOtherCorner1, newOppositeCorner, newOtherCorner2, newFixedCorner]; // [SW, SE, NE, NW]
+            break;
+    }
+
+    // Update the polygon directly with new corners
+    rectangle.setLatLngs([newCorners]);
+
+    // Calculate and update bounds for form values
+    const newBounds = L.latLngBounds(newCorners);
+    rectangle._originalBounds = newBounds;
 
     // Update form values
     updateFormValues();
 }
 
-// Handle side resize - keeps opposite side fixed
 // Handle side resize - keeps opposite side fixed
 function handleSideResize(currentLatLng) {
     const currentMousePoint = map.latLngToContainerPoint(currentLatLng);
@@ -647,37 +794,138 @@ function handleSideResize(currentLatLng) {
     // Get the original bounds
     const origSW = initialRectBounds.getSouthWest();
     const origNE = initialRectBounds.getNorthEast();
+    const origNW = L.latLng(origNE.lat, origSW.lng);
+    const origSE = L.latLng(origSW.lat, origNE.lng);
 
-    // Convert mouse movement to lat/lng changes
-    const movementPoint = map.containerPointToLatLng(L.point(dx, dy));
-    const originPoint = map.containerPointToLatLng(L.point(0, 0));
-    const deltaLat = movementPoint.lat - originPoint.lat;
-    const deltaLng = movementPoint.lng - originPoint.lng;
+    // Calculate the center and rotation
+    const center = initialRectBounds.getCenter();
+    const angle = (window.rotationAngle || 0) * Math.PI / 180;
+    const centerPoint = map.latLngToContainerPoint(center);
 
-    let newSW = L.latLng(origSW.lat, origSW.lng);
-    let newNE = L.latLng(origNE.lat, origNE.lng);
+    // Helper function to rotate a point around center
+    function rotatePoint(point, centerPt, angleRad) {
+        const x = point.x - centerPt.x;
+        const y = point.y - centerPt.y;
+        const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
+        const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
+        return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
+    }
+
+    // Get the current rotated corner positions in screen coordinates
+    const rotatedCorners = {
+        sw: rotatePoint(map.latLngToContainerPoint(origSW), centerPoint, angle),
+        se: rotatePoint(map.latLngToContainerPoint(origSE), centerPoint, angle),
+        ne: rotatePoint(map.latLngToContainerPoint(origNE), centerPoint, angle),
+        nw: rotatePoint(map.latLngToContainerPoint(origNW), centerPoint, angle)
+    };
+
+    // Calculate the direction vectors for each side of the rotated rectangle
+    let sideVector, perpVector;
 
     switch (resizeHandlePosition) {
         case 'top':
-            // Move the north boundary - drag up increases north boundary
-            newNE = L.latLng(origNE.lat + deltaLat, origNE.lng);
+            // Top side vector (from nw to ne)
+            sideVector = L.point(
+                rotatedCorners.ne.x - rotatedCorners.nw.x,
+                rotatedCorners.ne.y - rotatedCorners.nw.y
+            );
             break;
         case 'bottom':
-            // Move the south boundary - drag down decreases south boundary
-            newSW = L.latLng(origSW.lat + deltaLat, origSW.lng);
+            // Bottom side vector (from sw to se)
+            sideVector = L.point(
+                rotatedCorners.se.x - rotatedCorners.sw.x,
+                rotatedCorners.se.y - rotatedCorners.sw.y
+            );
             break;
         case 'left':
-            // Move the west boundary - drag left decreases west boundary
-            newSW = L.latLng(origSW.lat, origSW.lng + deltaLng);
+            // Left side vector (from sw to nw)
+            sideVector = L.point(
+                rotatedCorners.nw.x - rotatedCorners.sw.x,
+                rotatedCorners.nw.y - rotatedCorners.sw.y
+            );
             break;
         case 'right':
-            // Move the east boundary - drag right increases east boundary
-            newNE = L.latLng(origNE.lat, origNE.lng + deltaLng);
+            // Right side vector (from se to ne)
+            sideVector = L.point(
+                rotatedCorners.ne.x - rotatedCorners.se.x,
+                rotatedCorners.ne.y - rotatedCorners.se.y
+            );
             break;
     }
 
+    // Calculate the perpendicular vector (normal to the side)
+    perpVector = L.point(-sideVector.y, sideVector.x);
+
+    // Normalize the perpendicular vector
+    const perpLength = Math.sqrt(perpVector.x * perpVector.x + perpVector.y * perpVector.y);
+    if (perpLength > 0) {
+        perpVector.x /= perpLength;
+        perpVector.y /= perpLength;
+    }
+
+    // Project the mouse movement onto the perpendicular direction
+    const projectedDistance = dx * perpVector.x + dy * perpVector.y;
+
+    // Calculate the movement vector for this side
+    const moveVector = L.point(
+        projectedDistance * perpVector.x,
+        projectedDistance * perpVector.y
+    );
+
+    // Apply the movement to the appropriate corners
+    let newCorners = { ...rotatedCorners };
+
+    switch (resizeHandlePosition) {
+        case 'top':
+            // Move only the top edge
+            newCorners.ne = L.point(rotatedCorners.ne.x + moveVector.x, rotatedCorners.ne.y + moveVector.y);
+            newCorners.nw = L.point(rotatedCorners.nw.x + moveVector.x, rotatedCorners.nw.y + moveVector.y);
+            break;
+        case 'bottom':
+            // Move only the bottom edge
+            newCorners.sw = L.point(rotatedCorners.sw.x + moveVector.x, rotatedCorners.sw.y + moveVector.y);
+            newCorners.se = L.point(rotatedCorners.se.x + moveVector.x, rotatedCorners.se.y + moveVector.y);
+            break;
+        case 'left':
+            // Move only the left edge
+            newCorners.sw = L.point(rotatedCorners.sw.x + moveVector.x, rotatedCorners.sw.y + moveVector.y);
+            newCorners.nw = L.point(rotatedCorners.nw.x + moveVector.x, rotatedCorners.nw.y + moveVector.y);
+            break;
+        case 'right':
+            // Move only the right edge
+            newCorners.se = L.point(rotatedCorners.se.x + moveVector.x, rotatedCorners.se.y + moveVector.y);
+            newCorners.ne = L.point(rotatedCorners.ne.x + moveVector.x, rotatedCorners.ne.y + moveVector.y);
+            break;
+    }
+
+    // Calculate the new center from the moved corners
+    const newCenterX = (newCorners.sw.x + newCorners.se.x + newCorners.ne.x + newCorners.nw.x) / 4;
+    const newCenterY = (newCorners.sw.y + newCorners.se.y + newCorners.ne.y + newCorners.nw.y) / 4;
+    const newCenterPoint = L.point(newCenterX, newCenterY);
+
+    // Calculate the new "unrotated" bounds by rotating the corners back
+    function unrotatePoint(point, centerPt, angleRad) {
+        const x = point.x - centerPt.x;
+        const y = point.y - centerPt.y;
+        const unrotatedX = x * Math.cos(-angleRad) - y * Math.sin(-angleRad);
+        const unrotatedY = x * Math.sin(-angleRad) + y * Math.cos(-angleRad);
+        return L.point(centerPt.x + unrotatedX, centerPt.y + unrotatedY);
+    }
+
+    // Unrotate the new corners to get the underlying rectangle bounds
+    const unrotatedCorners = {
+        sw: unrotatePoint(newCorners.sw, newCenterPoint, angle),
+        se: unrotatePoint(newCorners.se, newCenterPoint, angle),
+        ne: unrotatePoint(newCorners.ne, newCenterPoint, angle),
+        nw: unrotatePoint(newCorners.nw, newCenterPoint, angle)
+    };
+
+    // Convert unrotated corners to lat/lng and create bounds
+    const unrotatedSW = map.containerPointToLatLng(unrotatedCorners.sw);
+    const unrotatedNE = map.containerPointToLatLng(unrotatedCorners.ne);
+
     // Create new bounds
-    const newBounds = L.latLngBounds([newSW, newNE]);
+    const newBounds = L.latLngBounds([unrotatedSW, unrotatedNE]);
 
     // Apply minimum size constraints
     const minSize = 0.001; // Minimum size in degrees
@@ -686,9 +934,10 @@ function handleSideResize(currentLatLng) {
         return; // Don't update if too small
     }
 
+    // Update the rectangle bounds
     rectangle.setBounds(newBounds);
 
-    // Reapply rotation
+    // Reapply rotation to update handles
     applyRotation();
 
     // Update form values
