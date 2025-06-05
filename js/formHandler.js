@@ -33,39 +33,31 @@ function updateFormValues() {
     const bounds = rectangle.getBounds();
     const center = bounds.getCenter(); // Use center as origin
     const originLat = center.lat;
-    const originLon = center.lng; // center.lng is from Leaflet
+    const originLon = center.lng;
 
-    // Calculate width and height in KM using map.distance
     const southWest = bounds.getSouthWest();
     const northEast = bounds.getNorthEast();
-    const northWest = bounds.getNorthWest(); // Use NW for height calculation start
+    const northWest = bounds.getNorthWest();
 
-    // Calculate width (distance between SW and SE or NW and NE along latitude)
     const widthMeters = map.distance(southWest, L.latLng(southWest.lat, northEast.lng));
-    // Calculate height (distance between NW and SW or NE and SE along longitude)
     const heightMeters = map.distance(northWest, southWest);
 
     const widthKm = widthMeters / 1000;
     const heightKm = heightMeters / 1000;
 
-    // Update form fields for origin
     document.getElementById('origin-lat').value = originLat.toFixed(6);
     document.getElementById('origin-lon').value = originLon.toFixed(6);
 
-    // Update form fields for extents
     document.getElementById('extent-x').value = widthKm.toFixed(3);
     document.getElementById('extent-y').value = heightKm.toFixed(3);
 
-    // Update rotation field based on the current angle from map interaction
     document.getElementById('rotation').value = (window.rotationAngle || 0).toFixed(1);
 
-    // Update grid point display
     updateGridPointDisplay();
 }
 
 // Function to update the rectangle based on form values
 function updateRectangleFromForm() {
-    // Add check to ensure rectangle and its path are initialized
     if (!rectangle || !rectangle._path) {
         console.warn("Rectangle not fully initialized yet. Skipping form update.");
         return;
@@ -87,12 +79,10 @@ function updateRectangleFromForm() {
 
         // Apply rotation, ensuring it's within [0, 360)
         window.rotationAngle = ((newRotation % 360) + 360) % 360;
-        applyRotation(); // This also updates handles
+        applyRotation();
 
-        // Update grid point display as extents might have changed
         updateGridPointDisplay();
     } else {
-        // Invalid input warning
         console.warn("Invalid input detected in form. Rectangle not updated.");
     }
 }

@@ -120,8 +120,6 @@ let rotationHandle = null;
 let rotationLine = null;
 let rotationHandleDistance = 50; // pixels
 
-// Note: resizeHandles is declared at the top of the file
-
 // Variables for resize operations
 let initialResizeHandlePos = null;
 let initialRectBounds = null;
@@ -230,7 +228,6 @@ function updateRotationHandlePosition() {
         isRotating = true;
         lastPos = e.latlng;
 
-        // Ensure rectangleCenter is set for rotation calculations
         const bounds = rectangle.getBounds();
         rectangleCenter = bounds.getCenter();
 
@@ -411,7 +408,6 @@ map.on('mousemove', function (e) {
 
     if (isRotating && rectangleCenter && lastPos) { // lastPos is a Leaflet LatLng
         // Calculate rotation angle
-        // Adapt the call to calculateAngle, as it now expects {lat, lon} objects
         const angleDelta = calculateAngle(
             { lat: rectangleCenter.lat, lon: rectangleCenter.lng },
             { lat: lastPos.lat, lon: lastPos.lng },
@@ -438,7 +434,6 @@ map.on('mousemove', function (e) {
             [ne.lat + latDiff, ne.lng + lonDiff],
         ]);
 
-        // Reapply rotation after moving (this will update handles)
         applyRotation();
 
         // Update form values

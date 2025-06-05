@@ -324,22 +324,3 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
             as_attachment=True,
             download_name=zip_filename,
         )
-        # Create zip file path within the temp directory
-        zip_filename = "nzcvm_output.zip"
-        zip_path = temp_dir / zip_filename
-
-        try:
-            zip_output_files(output_dir, zip_path)
-        except Exception as e:
-            print(f"Error during zipping: {e}")
-            return jsonify({"error": f"Failed to zip output files: {e}"}), 500
-
-        print(f"Sending zip file: {zip_path}")
-
-        # Send the zip file back to the client
-        return send_file(
-            zip_path,
-            mimetype="application/zip",
-            as_attachment=True,
-            download_name=zip_filename,
-        )

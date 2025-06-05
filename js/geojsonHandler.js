@@ -16,7 +16,6 @@ async function loadAvailableGeoJSONFiles() {
         const data = await response.json();
         availableGeoJSONFiles = data.files || [];
 
-        // Populate the model version dropdown with available files
         populateModelVersionDropdown();
 
     } catch (error) {
@@ -37,8 +36,8 @@ function populateModelVersionDropdown() {
         if (versionMatch) {
             const version = `${versionMatch[1]}.${versionMatch[2]}`;
             const option = document.createElement('option');
-            option.value = filename; // Store the full filename as value
-            option.textContent = version; // Display the version number
+            option.value = filename;
+            option.textContent = version;
             dropdown.appendChild(option);
         }
     });

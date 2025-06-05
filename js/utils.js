@@ -5,10 +5,8 @@ function kmToDegrees(km, centerLat) {
     // Earth's radius in km at the equator
     const earthRadius = 6371;
 
-    // Conversion for latitude is straightforward
-    const latDegrees = km / 111.32; // 1 degree latitude is approximately 111.32 km
+    const latDegrees = km / 111.32;
 
-    // Longitude depends on the latitude due to the Earth's curvature
     const latRadians = centerLat * (Math.PI / 180);
     const lonDegrees = km / (111.32 * Math.cos(latRadians));
 

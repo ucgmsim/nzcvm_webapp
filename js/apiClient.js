@@ -5,13 +5,12 @@ let countdownIntervalId = null;
 
 // Function to collect all configuration data from the form for config file download
 function getConfigurationDataForFile() {
-    // Extract actual model version from filename
     const selectedFilename = document.getElementById('model-version').value;
     const versionMatch = selectedFilename.match(/model_version_(\d+)p(\d+)/);
     const modelVersion = versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
 
     return {
-        'CALL_TYPE': 'GENERATE_VELOCITY_MOD', // Assuming this is fixed
+        'CALL_TYPE': 'GENERATE_VELOCITY_MOD',
         'MODEL_VERSION': modelVersion,
         'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
         'ORIGIN_LON': parseFloat(document.getElementById('origin-lon').value),
@@ -24,7 +23,7 @@ function getConfigurationDataForFile() {
         'EXTENT_LATLON_SPACING': parseFloat(document.getElementById('xy-spacing').value),
         'MIN_VS': parseFloat(document.getElementById('min-vs').value),
         'TOPO_TYPE': document.getElementById('topo-type').value,
-        'OUTPUT_DIR': '/tmp/nzcvm_output' // Fixed path for config file download
+        'OUTPUT_DIR': '/tmp/nzcvm_output'
     };
 }
 
@@ -136,7 +135,6 @@ async function generateModelAndDownload() {
     const formData = {
         CALL_TYPE: 'GENERATE_VELOCITY_MOD',
         MODEL_VERSION: (() => {
-            // Extract actual model version from filename
             const selectedFilename = document.getElementById('model-version').value;
             const versionMatch = selectedFilename.match(/model_version_(\d+)p(\d+)/);
             return versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
@@ -152,7 +150,6 @@ async function generateModelAndDownload() {
         EXTENT_LATLON_SPACING: parseFloat(document.getElementById('xy-spacing').value),
         MIN_VS: parseFloat(document.getElementById('min-vs').value),
         TOPO_TYPE: document.getElementById('topo-type').value
-        // OUTPUT_DIR removed - now handled by backend
     };
 
 

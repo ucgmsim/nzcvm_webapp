@@ -5,16 +5,13 @@
 import L from "leaflet";
 import AutoGraticule from "leaflet-auto-graticule";
 
-// Initialize map centered on New Zealand
 export const map = L.map('map').setView([-41.2865, 174.7762], 6);
-window.map = map; // Make global for non-module scripts
+window.map = map;
 
-// Add tile layer (OpenStreetMap)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
-// Add auto-graticule
 new AutoGraticule().addTo(map);
 
 // Custom Control to display mouse coordinates

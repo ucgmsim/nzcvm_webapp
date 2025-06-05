@@ -14,7 +14,6 @@ function handleLocationFileUpload(event) {
         return;
     }
 
-    // A file was selected, clear previous markers
     clearLocationMarkers(false);
 
     const reader = new FileReader();
