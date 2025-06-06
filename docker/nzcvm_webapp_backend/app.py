@@ -1,7 +1,7 @@
 import tempfile
 import zipfile
 from pathlib import Path
-import os
+import logging
 
 from flask import Flask, request, send_file, jsonify, abort, Response
 from flask_cors import CORS
@@ -11,6 +11,10 @@ from velocity_modelling.scripts.nzcvm import generate_velocity_model
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = app.logger
 
 # --- Configuration ---
 GEOJSON_DIR = Path(
@@ -46,9 +50,9 @@ def create_config_file(
     config_path = Path(directory) / "nzcvm.cfg"
     with open(config_path, "w") as f:
         f.write("\n".join(config_content))
-    print(f"Generated config file at: {config_path}")
-    print("Config file content:")
-    print("\n".join(config_content))  # Log the actual content written
+    logger.info(f"Generated config file at: {config_path}")
+    logger.info("Config file content:")
+    logger.info("\n".join(config_content))  # Log the actual content written
     return config_path
 
 
@@ -84,13 +88,13 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
             out_dir=output_dir,
             output_format="HDF5",
         )
-        print("NZCVM process completed successfully via direct call.")
+        logger.info("NZCVM process completed successfully via direct call.")
         return True
     except Exception as e:
-        print(f"NZCVM process failed during direct call: {e}")
+        logger.error(f"NZCVM process failed during direct call: {e}")
         import traceback
 
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         return False
 
 
@@ -122,15 +126,15 @@ def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
     zipfile.LargeZipFile
         If a file in the directory exceeds ZIP file size limits and allowZip64 is False (default is True).
     """
-    print(f"Zipping contents of {directory_to_zip} into {zip_path}")
+    logger.info(f"Zipping contents of {directory_to_zip} into {zip_path}")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for file_path in directory_to_zip.rglob("*"):
             if file_path.is_file():
                 # archive_name is the name inside the zip file
                 archive_name = file_path.relative_to(directory_to_zip)
-                print(f"Adding {file_path} as {archive_name}")
+                logger.debug(f"Adding {file_path} as {archive_name}")
                 zipf.write(file_path, arcname=archive_name)
-    print("Zipping complete.")
+    logger.info("Zipping complete.")
 
 
 # --- Flask Route ---
@@ -155,7 +159,7 @@ def list_geojson_files() -> Response:
         return jsonify({"files": sorted(geojson_files, reverse=True)})
 
     except Exception as e:
-        print(f"Error listing GeoJSON files: {e}")
+        logger.error(f"Error listing GeoJSON files: {e}")
         return jsonify({"error": "Failed to list GeoJSON files"}), 500
 
 
@@ -197,7 +201,7 @@ def serve_geojson_file(filename: str) -> Response:
         return response
 
     except Exception as e:
-        print(f"Error serving GeoJSON file {filename}: {e}")
+        logger.error(f"Error serving GeoJSON file {filename}: {e}")
         return jsonify({"error": "Failed to serve GeoJSON file"}), 500
 
 
@@ -236,7 +240,7 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         abort(400, description="Request must be JSON")
 
     config_data = request.get_json()
-    print("Received config data:", config_data)
+    logger.info("Received config data:", config_data)
 
     # Ensure all fields required by the nzcvm.py script are present
     # Use UPPERCASE keys for consistency with the NZCVM script
@@ -276,7 +280,7 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         # Create the config file within the temp directory
         config_path = create_config_file(config_data, temp_dir)
 
-        print(
+        logger.info(
             f"Attempting to run NZCVM process. Config: {config_path}, Output directory: {output_dir}"
         )
         success = run_nzcvm_process(config_path, output_dir)
@@ -291,8 +295,8 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
 
         # Check if the output directory has files before zipping
         if not any(output_dir.iterdir()):
-            print(
-                f"Warning: Output directory '{output_dir}' is empty after process execution."
+            logger.warning(
+                f"Output directory '{output_dir}' is empty after process execution."
             )
             return (
                 jsonify(
@@ -312,10 +316,10 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         try:
             zip_output_files(output_dir, zip_path)
         except Exception as e:
-            print(f"Error during zipping: {e}")
+            logger.error(f"Error during zipping: {e}")
             return jsonify({"error": f"Failed to zip output files: {e}"}), 500
 
-        print(f"Sending zip file: {zip_path}")
+        logger.info(f"Sending zip file: {zip_path}")
 
         # Send the zip file back to the client
         return send_file(
