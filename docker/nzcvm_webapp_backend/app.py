@@ -18,7 +18,7 @@ logger = app.logger
 
 # --- Configuration ---
 GEOJSON_DIR = Path(
-    "/usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional"
+    "/usr/local/lib/python3.12/site-packages/velocity_modelling/generated_basin_geojsons"
 )
 MODEL_VERSIONS_DIR = Path(
     "/usr/local/lib/python3.12/site-packages/velocity_modelling/model_versions"

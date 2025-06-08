@@ -14,16 +14,10 @@ RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
 # Setting this environment variable tells the build script the correct path, preventing a "not found" error.
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
-RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling@main#egg=velocity_modelling
+RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling@feat-gen-model-outlines#egg=velocity_modelling
 
-# After velocity_modelling installation, find all .geojson files and create gzipped copies
-RUN find /usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional -name "*.geojson" -type f | \
-    while read file; do \
-    echo "Compressing: $file"; \
-    gzip -c "$file" > "$file.gz"; \
-    done && \
-    echo "GeoJSON compression complete. Files found and compressed:" && \
-    find /usr/local/lib/python3.12/site-packages/velocity_modelling/data/regional -name "*.geojson*" -type f | sort
+# Generate outlines for all model versions as geojson.gz.
+RUN python /usr/local/lib/python3.12/site-packages/velocity_modelling/tools/generate_model_outlines.py
 
 # Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
 RUN pip install --no-cache-dir -r requirements.txt
