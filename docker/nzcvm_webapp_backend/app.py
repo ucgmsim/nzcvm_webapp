@@ -56,7 +56,7 @@ def create_config_file(
     return config_path
 
 
-def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
+def run_nzcvm_process(config_path: Path, output_dir: Path) -> None:
     """Runs the NZCVM process by calling the library functions directly.
 
     Executes the NZCVM script to generate the velocity model based on
@@ -73,15 +73,13 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
 
     Returns
     -------
-    bool
-        True if the NZCVM process completed successfully, False otherwise.
+    None
 
     Raises
     ------
     Exception
-        Catches exceptions from `generate_velocity_model` and logs them.
+        Re-raises exceptions from `generate_velocity_model` after logging them.
     """
-
     try:
         generate_velocity_model(
             nzcvm_cfg_path=config_path,
@@ -89,13 +87,12 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> bool:
             output_format="HDF5",
         )
         logger.info("NZCVM process completed successfully via direct call.")
-        return True
     except Exception as e:
         logger.error(f"NZCVM process failed during direct call: {e}")
         import traceback
 
         logger.error(traceback.format_exc())
-        return False
+        raise  # Re-raise the exception to let it bubble up
 
 
 def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
@@ -283,9 +280,10 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         logger.info(
             f"Attempting to run NZCVM process. Config: {config_path}, Output directory: {output_dir}"
         )
-        success = run_nzcvm_process(config_path, output_dir)
-
-        if not success:
+        try:
+            run_nzcvm_process(config_path, output_dir)
+        except Exception as e:
+            logger.error(f"NZCVM process failed: {e}")
             return (
                 jsonify(
                     {"error": "NZCVM process failed. Check server logs for details."}
