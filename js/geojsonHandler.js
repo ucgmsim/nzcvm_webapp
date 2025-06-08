@@ -65,7 +65,7 @@ function addLegend() {
     legend.onAdd = function () {
         const div = L.DomUtil.create('div', 'legend');
         div.innerHTML = '<h4>Basin Regions</h4>' +
-            '<i style="background:#ba0045"></i> Basin Areas<br>';
+            '<i class="legend-basin-icon"></i> Basin Areas<br>';
         return div;
     };
     legend.addTo(map);
@@ -91,15 +91,7 @@ function loadGeoJSONByModelVersion(filename) {
     // Create a loading indicator
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'loading-indicator';
-    loadingDiv.style.position = 'absolute';
-    loadingDiv.style.top = '50%';
-    loadingDiv.style.left = '50%';
-    loadingDiv.style.transform = 'translate(-50%, -50%)';
-    loadingDiv.style.background = 'white';
-    loadingDiv.style.padding = '10px';
-    loadingDiv.style.borderRadius = '5px';
-    loadingDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-    loadingDiv.style.zIndex = '1000';
+    loadingDiv.className = 'loading-indicator';
     loadingDiv.innerText = 'Loading GeoJSON data...';
     document.getElementById('map-container').appendChild(loadingDiv);
 

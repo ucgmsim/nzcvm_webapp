@@ -206,27 +206,17 @@ document.addEventListener('DOMContentLoaded', function () {
 function createLocationUploadControls() {
     const controlPanel = document.createElement('div');
     controlPanel.id = 'location-upload-panel';
-    controlPanel.style.position = 'absolute';
-    controlPanel.style.top = 'auto';
-    controlPanel.style.bottom = '25px';
-    controlPanel.style.right = '10px';
-    controlPanel.style.zIndex = '1000';
-    controlPanel.style.padding = '10px';
-    controlPanel.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'; // Slightly transparent background
-    controlPanel.style.border = '1px solid #ccc';
-    controlPanel.style.borderRadius = '5px';
-    controlPanel.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)'; // Add shadow for better visibility
 
     controlPanel.innerHTML = `
-        <div style="margin-bottom: 8px; font-weight: bold;">Upload Locations</div>
-        <div style="margin-bottom: 8px; font-size: 0.9em;">(.csv: lon,lat,[name] or .ll: lon lat [name])</div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-            <input type="file" id="location-file-input" accept=".csv,.ll" style="padding: 5px;" />
-            <div style="display: flex; align-items: center; gap: 5px;">
+        <div class="location-upload-title">Upload Locations</div>
+        <div class="location-upload-subtitle">(.csv: lon,lat,[name] or .ll: lon lat [name])</div>
+        <div class="location-upload-controls">
+            <input type="file" id="location-file-input" class="location-upload-file-input" accept=".csv,.ll" />
+            <div class="location-upload-checkbox-container">
                 <input type="checkbox" id="file-has-headers" checked>
-                <label for="file-has-headers" style="font-size: 0.9em;">.csv has headers</label>
+                <label for="file-has-headers" class="location-upload-checkbox-label">.csv has headers</label>
             </div>
-            <button id="clear-locations-btn" style="padding: 5px 10px;">Clear Locations</button>
+            <button id="clear-locations-btn" class="location-upload-clear-btn">Clear Locations</button>
         </div>
     `;
 

@@ -18,9 +18,6 @@ new AutoGraticule().addTo(map);
 const CoordinatesControl = L.Control.extend({
     onAdd: function (map) {
         this._div = L.DomUtil.create('div', 'leaflet-control-coordinates'); // Create a div with a class for styling
-        this._div.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-        this._div.style.padding = '2px 5px';
-        this._div.style.borderRadius = '3px';
         this.updateText('Lat: -, Lon: -');
         return this._div;
     },

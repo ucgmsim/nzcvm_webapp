@@ -191,13 +191,48 @@ h2 {
 
 #location-upload-panel {
     position: absolute;
-    top: 10px;
+    bottom: 25px;
     right: 10px;
     z-index: 1000;
-    background-color: white;
-    padding: 15px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #ccc;
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+.location-upload-title {
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.location-upload-subtitle {
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.location-upload-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.location-upload-file-input {
+    padding: 5px;
+}
+
+.location-upload-checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.location-upload-checkbox-label {
+    font-size: 0.9em;
+}
+
+.location-upload-clear-btn {
+    padding: 5px 10px;
 }
 
 #error-message {
@@ -212,4 +247,51 @@ h2 {
     z-index: 1000;
     max-width: 80%;
     text-align: left;
+}
+
+/* Leaflet coordinates control */
+.leaflet-control-coordinates {
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+/* Loading indicator */
+.loading-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+/* Status message colors */
+.status-orange {
+    color: orange;
+}
+
+.status-red {
+    color: red;
+}
+
+.status-chocolate {
+    color: chocolate;
+}
+
+.status-green {
+    color: green;
+}
+
+/* Hidden element */
+.hidden-download-link {
+    display: none;
+}
+
+/* Legend icon for basin areas */
+.legend-basin-icon {
+    background: #ba0045;
 }

@@ -127,7 +127,7 @@ def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
         If a file in the directory exceeds ZIP file size limits and allowZip64 is False (default is True).
     """
     logger.info(f"Zipping contents of {directory_to_zip} into {zip_path}")
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_LZMA) as zipf:
         for file_path in directory_to_zip.rglob("*"):
             if file_path.is_file():
                 # archive_name is the name inside the zip file

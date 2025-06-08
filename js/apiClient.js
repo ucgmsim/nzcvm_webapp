@@ -57,7 +57,7 @@ async function generateModelAndDownload() {
     }
 
     const statusMessage = document.getElementById('status-message');
-    statusMessage.style.color = 'orange'; // Set initial color
+    statusMessage.className = 'status-orange'; // Set initial color
 
     // --- Calculate estimated runtime ---
     let estimatedSeconds = 0;
@@ -87,7 +87,7 @@ async function generateModelAndDownload() {
     // --- Check if estimated runtime exceeds the limit ---
     if (estimatedSeconds >= 3600) {
         statusMessage.innerHTML = 'This website can only generate models that require less than 1 hour. Please reduce the number of points in your grid until the run time is less than 1 hour, or <a href="#" id="download-config-link-for-large-model">download the configuration file</a> and generate the model on your computer.';
-        statusMessage.style.color = 'red';
+        statusMessage.className = 'status-red';
         // Add event listener for the new download link
         const downloadLink = document.getElementById('download-config-link-for-large-model');
         if (downloadLink) {
@@ -107,11 +107,11 @@ async function generateModelAndDownload() {
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = remainingSeconds % 60;
             statusMessage.textContent = `Generating model. Estimated time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            statusMessage.style.color = 'chocolate';
+            statusMessage.className = 'status-chocolate';
         } else {
             // Timer has run out
             statusMessage.textContent = 'Generation taking longer than expected. Please wait.';
-            statusMessage.style.color = 'chocolate';
+            statusMessage.className = 'status-chocolate';
             if (countdownIntervalId) {
                 clearInterval(countdownIntervalId); // Stop the interval
                 countdownIntervalId = null;
@@ -193,7 +193,7 @@ async function generateModelAndDownload() {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.style.display = 'none';
+            a.className = 'hidden-download-link';
             a.href = url;
             // Create a filename based on a timestamp
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -203,7 +203,7 @@ async function generateModelAndDownload() {
             window.URL.revokeObjectURL(url);
             a.remove();
             statusMessage.innerHTML = 'Model generated and downloaded successfully! <a href="https://github.com/ucgmsim/velocity_modelling/blob/main/wiki/OutputFormats.md#hdf5-file-structure" target="_blank" rel="noopener noreferrer">click here</a> for information about the output format.';
-            statusMessage.style.color = 'green';
+            statusMessage.className = 'status-green';
         } else {
             // Clear timer on unexpected content type
             if (countdownIntervalId) {
@@ -231,7 +231,7 @@ async function generateModelAndDownload() {
         } else {
             statusMessage.textContent = `Error: ${error.message}`; // Display detailed error
         }
-        statusMessage.style.color = 'red';
+        statusMessage.className = 'status-red';
     }
 }
 
