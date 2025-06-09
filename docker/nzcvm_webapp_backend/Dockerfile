@@ -4,9 +4,9 @@ FROM python:3.12-alpine
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container at /app
+# Copy the requirements file and generate_model_outlines.py script into the container at /app
 # The source path is relative to the build context defined in docker-compose.yml
-COPY docker/nzcvm_webapp_backend/requirements.txt /app/
+COPY docker/nzcvm_webapp_backend/requirements.txt docker/nzcvm_webapp_backend/generate_model_outlines.py /app/
 
 RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
 # Explicitly set the path to the llvm-config executable for the llvmlite build process.
@@ -14,10 +14,10 @@ RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
 # Setting this environment variable tells the build script the correct path, preventing a "not found" error.
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
-RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling@feat-gen-model-outlines#egg=velocity_modelling
+RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling#egg=velocity_modelling
 
 # Generate outlines for all model versions as geojson.gz.
-RUN python /usr/local/lib/python3.12/site-packages/velocity_modelling/tools/generate_model_outlines.py
+RUN python generate_model_outlines.py generate --path /usr/local/lib/python3.12/site-packages/velocity_modelling/
 
 # Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
 RUN pip install --no-cache-dir -r requirements.txt
