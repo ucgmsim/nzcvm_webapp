@@ -12,16 +12,20 @@ function updateGridPointDisplay() {
 
     const gridData = calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing, originLat);
     const approxRunTimeMin = calculateApproxRunTime(gridData.totalGridPoints) / 60.0;
+    const modelSizeGB = 4 * gridData.totalGridPoints / 1e9;
 
     // Use Number.toLocaleString() for better readability of large numbers
     const formatNumber = (num) => isNaN(num) ? '---' : num.toLocaleString();
     // Format runtime to 1 decimal place
     const formatTime = (time) => isNaN(time) ? '---' : time.toFixed(1);
+    // Format model size to 2 decimal places
+    const formatSize = (size) => isNaN(size) ? '---' : size.toFixed(2);
 
     document.querySelector('#grid-nx-display span').textContent = formatNumber(gridData.nx);
     document.querySelector('#grid-ny-display span').textContent = formatNumber(gridData.ny);
     document.querySelector('#grid-nz-display span').textContent = formatNumber(gridData.nz);
     document.querySelector('#grid-total-display span').textContent = formatNumber(gridData.totalGridPoints);
+    document.querySelector('#grid-modelsize-display span').textContent = formatSize(modelSizeGB);
     document.querySelector('#grid-runtime-display span').textContent = formatTime(approxRunTimeMin);
 }
 
