@@ -164,12 +164,31 @@ def list_model_versions() -> Response:
             geojson_path = GEOJSON_DIR / geojson_filename
 
             if geojson_path.exists():
-                # Convert version format (e.g., "2p03" -> "2.03")
-                version_match = re.match(r"(\d+)p(\d+)", version_name)
-                if version_match:
-                    display_version = f"{version_match[1]}.{version_match[2]}"
+                # Create a more descriptive display version
+                # Convert version format (e.g., "2p03" -> "2.03", "2p03_nelson_only" -> "2.03 Nelson Only")
+                if "_" in version_name:
+                    # Split on underscore to get base version and descriptor
+                    parts = version_name.split("_", 1)
+                    base_version = parts[0]
+                    descriptor = parts[1]
+
+                    # Convert base version format (e.g., "2p03" -> "2.03")
+                    version_match = re.match(r"(\d+)p(\d+)", base_version)
+                    if version_match:
+                        base_display = f"{version_match[1]}.{version_match[2]}"
+                    else:
+                        base_display = base_version
+
+                    # Format descriptor (replace underscores with spaces and title case)
+                    formatted_descriptor = descriptor.replace("_", " ").title()
+                    display_version = f"{base_display} {formatted_descriptor}"
                 else:
-                    display_version = version_name
+                    # No descriptor, just convert base version
+                    version_match = re.match(r"(\d+)p(\d+)", version_name)
+                    if version_match:
+                        display_version = f"{version_match[1]}.{version_match[2]}"
+                    else:
+                        display_version = version_name
 
                 model_versions.append(
                     {
