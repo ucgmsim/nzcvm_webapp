@@ -199,13 +199,31 @@ def list_model_versions() -> Response:
                     }
                 )
 
-        return jsonify(
-            {
-                "model_versions": sorted(
-                    model_versions, key=lambda x: x["version"], reverse=True
-                )
-            }
-        )
+        # Custom sorting function to sort by version number (descending) and then by descriptor presence
+        def sort_key(model):
+            version_name = model["version"]
+
+            # Extract base version number for primary sorting
+            base_version = (
+                version_name.split("_")[0] if "_" in version_name else version_name
+            )
+            version_match = re.match(r"(\d+)p(\d+)", base_version)
+            if version_match:
+                # Convert to comparable format: higher numbers first
+                major = int(version_match[1])
+                minor = int(version_match[2])
+                version_num = (major, minor)
+            else:
+                # Fallback for non-standard version formats
+                version_num = (0, 0)
+
+            # Secondary sort: models without descriptors first (0), then with descriptors (1)
+            has_descriptor = 1 if "_" in version_name else 0
+
+            # Tertiary sort: alphabetical by full version name for consistent ordering
+            return (-version_num[0], -version_num[1], has_descriptor, version_name)
+
+        return jsonify({"model_versions": sorted(model_versions, key=sort_key)})
 
     except Exception as e:
         logger.error(f"Error listing model versions: {e}")
