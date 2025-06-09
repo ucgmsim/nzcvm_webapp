@@ -4,10 +4,9 @@ Script to generate compressed GeoJSON basin outlines for model versions.
 
 This script:
 1. Reads YAML model version files to get lists of basins for each model version
-2. Finds corresponding basin outline files in data/regional directory
-3. Converts any .txt coordinate files to GeoJSON if needed
-4. Combines all GeoJSON files for each model version
-5. Compresses the final combined GeoJSON file
+2. Finds corresponding GeoJSON basin outline files in data/regional directory
+3. Combines all GeoJSON files for each model version
+4. Compresses the final combined GeoJSON file
 
 Usage Examples:
 
@@ -17,19 +16,13 @@ Main Usage - Generate All Model Outline Files:
     python generate_model_outlines.py --path /path/to/velocity_modelling
     python generate_model_outlines.py generate --path /path/to/velocity_modelling
 
-    This will process all YAML model version files, find basin outline files,
-    convert txt files to GeoJSON if needed, combine all files for each model
-    version, and create compressed .geojson.gz files in ../generated_basin_geojsons/
+    This will process all YAML model version files, find GeoJSON basin outline files,
+    combine all files for each model version, and create compressed .geojson.gz files
+    in ../generated_basin_geojsons/
 
 Additional Commands:
-    python generate_model_outlines.py compare [--path /path/to/velocity_modelling]
-        Compare generated vs existing files (specifically 2p07 basin files)
-
-    python generate_model_outlines.py test
-        Test txt-to-geojson conversion functionality using embedded test data
-
-    python generate_model_outlines.py convert <file.txt>
-        Convert a single txt coordinate file to GeoJSON format
+    python generate_model_outlines.py compare file1.geojson file2.geojson
+        Compare two GeoJSON files for differences, duplicates, and feature order
 
     python generate_model_outlines.py --help
         Show detailed help for all commands
@@ -40,24 +33,15 @@ Additional Commands:
     --path / -p: Specify the path to the velocity_modelling directory containing
                  data/, model_versions/, and generated_basin_geojsons/ folders.
                  If not specified, defaults to the parent directory of the script.
-
-Expected Output Files:
-    - 2p03_basins.geojson + 2p03_basins.geojson.gz
-    - 2p07_basins.geojson + 2p07_basins.geojson.gz
-    - 2p07_students2024_basins.geojson + 2p07_students2024_basins.geojson.gz
-    - 2p03_nelson_only_basins.geojson + 2p03_nelson_only_basins.geojson.gz
 """
 
-import os
-import sys
 import gzip
 import json
-import random
-import yaml
-from itertools import cycle
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
+
 import typer
+import yaml
 
 # Create the Typer app
 app = typer.Typer(
@@ -67,8 +51,20 @@ app = typer.Typer(
 )
 
 
-def find_model_version_files(model_versions_dir):
-    """Find all YAML files in the model_versions directory."""
+def find_model_version_files(model_versions_dir: str) -> List[str]:
+    """
+    Find all YAML files in the model_versions directory.
+
+    Parameters
+    ----------
+    model_versions_dir : str
+        Path to the directory containing model version YAML files.
+
+    Returns
+    -------
+    List[str]
+        Sorted list of absolute paths to YAML files found in the directory.
+    """
     model_dir = Path(model_versions_dir)
     model_files = []
     for file in model_dir.iterdir():
@@ -77,8 +73,21 @@ def find_model_version_files(model_versions_dir):
     return sorted(model_files)
 
 
-def read_yaml_model_version(yaml_file):
-    """Read a YAML model version file and extract basin names."""
+def read_yaml_model_version(yaml_file: str) -> List[str]:
+    """
+    Read a YAML model version file and extract basin names.
+
+    Parameters
+    ----------
+    yaml_file : str
+        Path to the YAML file containing model version configuration.
+
+    Returns
+    -------
+    List[str]
+        List of basin names extracted from the 'basins' key in the YAML file.
+        Returns empty list if 'basins' key is not found.
+    """
     with open(yaml_file, "r") as f:
         config = yaml.safe_load(f)
 
@@ -86,109 +95,58 @@ def read_yaml_model_version(yaml_file):
     return basins
 
 
-def find_basin_files(basin_name, regional_dir):
+def find_basin_files(basin_name: str, regional_dir: str) -> List[str]:
     """
-    Find basin files for a given basin name in the regional directory.
-    Strip version suffixes from basin names when looking for files.
-    Returns a list of file paths (including multi-part files), empty list if none found.
-    Prioritizes .geojson files over .txt files to avoid duplicates.
+    Find GeoJSON basin files for a given basin name in the regional directory.
+
+    Strip version suffixes from basin names and return all .geojson files
+    in the basin's subdirectory.
+
+    Parameters
+    ----------
+    basin_name : str
+        Name of the basin, potentially with version suffix (e.g., "basin_v19p1").
+    regional_dir : str
+        Path to the regional directory containing basin subdirectories.
+
+    Returns
+    -------
+    List[str]
+        Sorted list of paths to GeoJSON files found in the basin's subdirectory.
+        Returns empty list if no files are found or the basin directory doesn't exist.
     """
     # Strip version suffix (e.g., "_v19p1", "_v21p8") from basin name
     clean_basin_name = basin_name
     if "_v" in basin_name:
         clean_basin_name = basin_name.split("_v")[0]
 
-    found_files = []
-
-    # Try different file patterns
-    base_patterns = [
-        f"{clean_basin_name}_outline_WGS84",
-        f"{clean_basin_name}",
-    ]
-
-    # First try in the direct subdirectory
+    # Get all .geojson files in the basin's subdirectory
     basin_dir = Path(regional_dir) / clean_basin_name
     if basin_dir.exists():
-        for base_pattern in base_patterns:
-            # Look for main file (without number suffix)
-            # Prefer .geojson over .txt to avoid duplicates
-            main_geojson = basin_dir / f"{base_pattern}.geojson"
-            main_txt = basin_dir / f"{base_pattern}.txt"
+        found_files = [str(f) for f in basin_dir.glob("*.geojson")]
+        return sorted(found_files)  # Sort for consistent ordering
 
-            if main_geojson.exists():
-                found_files.append(str(main_geojson))
-            elif main_txt.exists():
-                found_files.append(str(main_txt))
-
-            # Look for numbered parts (_1, _2, _3, etc.)
-            part_num = 1
-            while True:
-                part_geojson = basin_dir / f"{base_pattern}_{part_num}.geojson"
-                part_txt = basin_dir / f"{base_pattern}_{part_num}.txt"
-
-                if part_geojson.exists():
-                    found_files.append(str(part_geojson))
-                    part_num += 1
-                elif part_txt.exists():
-                    found_files.append(str(part_txt))
-                    part_num += 1
-                else:
-                    break
-
-        # If we found files in direct subdirectory, return them (no need to search elsewhere)
-        if found_files:
-            return found_files
-
-    # If not found in direct subdirectory, try searching in all subdirectories
-    regional_path = Path(regional_dir)
-    for root_path in regional_path.rglob("*"):
-        if not root_path.is_dir():
-            continue
-        # Skip the root directory we already checked
-        if root_path == basin_dir:
-            continue
-
-        for base_pattern in base_patterns:
-            # Look for main file - prefer .geojson over .txt
-            geojson_file = root_path / f"{base_pattern}.geojson"
-            txt_file = root_path / f"{base_pattern}.txt"
-
-            if geojson_file.exists():
-                file_path = str(geojson_file)
-                if file_path not in found_files:
-                    found_files.append(file_path)
-            elif txt_file.exists():
-                file_path = str(txt_file)
-                if file_path not in found_files:
-                    found_files.append(file_path)
-
-            # Look for numbered parts - prefer .geojson over .txt
-            part_num = 1
-            while True:
-                geojson_file = root_path / f"{base_pattern}_{part_num}.geojson"
-                txt_file = root_path / f"{base_pattern}_{part_num}.txt"
-
-                if geojson_file.exists():
-                    file_path = str(geojson_file)
-                    if file_path not in found_files:
-                        found_files.append(file_path)
-                    part_num += 1
-                elif txt_file.exists():
-                    file_path = str(txt_file)
-                    if file_path not in found_files:
-                        found_files.append(file_path)
-                    part_num += 1
-                else:
-                    break
-
-    return found_files
+    return []
 
 
-def ensure_geojson_exists(file_path):
+def ensure_geojson_exists(file_path: str) -> Optional[str]:
     """
-    Ensure a GeoJSON file exists. If the file is a .txt file, convert it to GeoJSON.
-    Always regenerate GeoJSON from txt files to ensure fresh data.
-    Returns the path to the GeoJSON file if successful, None otherwise.
+    Ensure a GeoJSON file exists and return its path.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file to check.
+
+    Returns
+    -------
+    Optional[str]
+        The path to the GeoJSON file if it exists and has .geojson extension,
+        None otherwise.
+
+    Notes
+    -----
+    Prints warnings if the file doesn't exist or doesn't have .geojson extension.
     """
     if file_path.endswith(".geojson"):
         if Path(file_path).exists():
@@ -196,45 +154,52 @@ def ensure_geojson_exists(file_path):
         else:
             print(f"Warning: GeoJSON file does not exist: {file_path}")
             return None
-
-    elif file_path.endswith(".txt"):
-        # Convert .txt to .geojson using inline function
-        geojson_path = file_path.replace(".txt", ".geojson")
-
-        try:
-            print(f"Converting {file_path} to {geojson_path}")
-            convert_txt_to_geojson(file_path, geojson_path)
-            if Path(geojson_path).exists():
-                return geojson_path
-            else:
-                print(f"Error: GeoJSON file was not created: {geojson_path}")
-                return None
-        except Exception as e:
-            print(f"Error converting {file_path}: {e}")
-            return None
-
     else:
-        print(f"Warning: Unsupported file type: {file_path}")
+        print(f"Warning: File is not a GeoJSON file: {file_path}")
         return None
 
 
-def combine_geojson_files(geojson_files, output_path):
-    """Combine multiple GeoJSON files into one using inline function."""
+def combine_geojson_files(geojson_files: List[str], output_path: str) -> None:
+    """
+    Combine multiple GeoJSON files into one.
+
+    Parameters
+    ----------
+    geojson_files : List[str]
+        List of paths to GeoJSON files to combine.
+    output_path : str
+        Path where the combined GeoJSON file will be written.
+
+    Raises
+    ------
+    RuntimeError
+        If an error occurs during the combination process.
+    """
+    print(f"Combining {len(geojson_files)} GeoJSON files into {output_path}")
     try:
-        print(f"Combining {len(geojson_files)} GeoJSON files into {output_path}")
         combine_geojson_inline(geojson_files, output_path)
-        return True
     except Exception as e:
-        print(f"Error combining GeoJSON files: {e}")
-        return False
+        raise RuntimeError(f"Error combining GeoJSON files: {e}") from e
 
 
-def compress_geojson(geojson_path):
-    """Compress a GeoJSON file using gzip and delete the original."""
+def compress_geojson(geojson_path: str) -> None:
+    """
+    Compress a GeoJSON file using gzip and delete the original.
+
+    Parameters
+    ----------
+    geojson_path : str
+        Path to the GeoJSON file to compress.
+
+    Raises
+    ------
+    RuntimeError
+        If an error occurs during compression or file deletion.
+    """
     compressed_path = f"{geojson_path}.gz"
 
+    print(f"Compressing {geojson_path} to {compressed_path}")
     try:
-        print(f"Compressing {geojson_path} to {compressed_path}")
         with open(geojson_path, "rb") as f_in:
             with gzip.open(compressed_path, "wb") as f_out:
                 f_out.writelines(f_in)
@@ -243,14 +208,28 @@ def compress_geojson(geojson_path):
         # Delete the original GeoJSON file after successful compression
         Path(geojson_path).unlink()
         print(f"Deleted original file {geojson_path}")
-        return True
     except Exception as e:
-        print(f"Error compressing {geojson_path}: {e}")
-        return False
+        raise RuntimeError(f"Error compressing {geojson_path}: {e}") from e
 
 
-def process_model_version(yaml_file, regional_dir, output_dir):
-    """Process a single model version YAML file."""
+def process_model_version(yaml_file: str, regional_dir: str, output_dir: str) -> None:
+    """
+    Process a single model version YAML file.
+
+    Parameters
+    ----------
+    yaml_file : str
+        Path to the YAML file containing model version configuration.
+    regional_dir : str
+        Path to the regional directory containing basin data.
+    output_dir : str
+        Path to the output directory for generated files.
+
+    Raises
+    ------
+    RuntimeError
+        If no valid GeoJSON files are found or if processing fails.
+    """
     print(f"\nProcessing {yaml_file}")
 
     # Extract version from filename
@@ -261,12 +240,12 @@ def process_model_version(yaml_file, regional_dir, output_dir):
     basin_names = read_yaml_model_version(yaml_file)
     print(f"Found {len(basin_names)} basins in {version_name}: {basin_names}")
 
-    # Find corresponding basin files and ensure they're GeoJSON
+    # Find corresponding GeoJSON basin files
     valid_geojson_files = []
     for basin_name in basin_names:
         basin_files = find_basin_files(basin_name, regional_dir)
         if not basin_files:
-            print(f"Warning: Could not find file for basin {basin_name}")
+            print(f"Warning: Could not find GeoJSON file for basin {basin_name}")
             continue
 
         for basin_file in basin_files:
@@ -276,12 +255,11 @@ def process_model_version(yaml_file, regional_dir, output_dir):
                 print(f"  Added: {Path(geojson_file).name}")
             else:
                 print(
-                    f"  Skipped: {Path(basin_file).name} - could not create or find GeoJSON file"
+                    f"  Skipped: {Path(basin_file).name} - GeoJSON file not found or invalid"
                 )
 
     if not valid_geojson_files:
-        print(f"No valid GeoJSON files found for {yaml_file}")
-        return False
+        raise RuntimeError(f"No valid GeoJSON files found for {yaml_file}")
 
     print(f"Processing {len(valid_geojson_files)} valid GeoJSON files")
 
@@ -289,19 +267,29 @@ def process_model_version(yaml_file, regional_dir, output_dir):
     combined_geojson_path = str(Path(output_dir) / f"{version_name}_basins.geojson")
 
     # Combine all GeoJSON files
-    if not combine_geojson_files(valid_geojson_files, combined_geojson_path):
-        return False
+    combine_geojson_files(valid_geojson_files, combined_geojson_path)
 
     # Compress the combined GeoJSON
-    if not compress_geojson(combined_geojson_path):
-        return False
+    compress_geojson(combined_geojson_path)
 
     print(f"Successfully processed {yaml_file}")
-    return True
 
 
-def main(velocity_modelling_path: Optional[str] = None):
-    """Main function to process all model version files."""
+def main(velocity_modelling_path: Optional[str] = None) -> None:
+    """
+    Main function to process all model version files.
+
+    Parameters
+    ----------
+    velocity_modelling_path : Optional[str], default=None
+        Path to the velocity_modelling directory. If None, uses the parent
+        directory of the script.
+
+    Raises
+    ------
+    typer.Exit
+        If required directories are missing or if processing fails.
+    """
     # Get the directories
     if velocity_modelling_path:
         velocity_modelling_dir = Path(velocity_modelling_path).resolve()
@@ -365,10 +353,10 @@ def main(velocity_modelling_path: Optional[str] = None):
     success_count = 0
     for model_file in model_files:
         try:
-            if process_model_version(model_file, str(regional_dir), str(output_dir)):
-                success_count += 1
+            process_model_version(model_file, str(regional_dir), str(output_dir))
+            success_count += 1
         except Exception as e:
-            print(f"Unexpected error processing {model_file}: {e}")
+            print(f"Error processing {model_file}: {e}")
 
     print(
         f"\nProcessing complete: {success_count}/{len(model_files)} files processed successfully"
@@ -384,98 +372,61 @@ def main(velocity_modelling_path: Optional[str] = None):
         raise typer.Exit(1)
 
 
-# Functions from basin_outline_to_geojson.py
-def read_coordinates_from_file(file_path):
-    """Read coordinates from a text file."""
-    with open(file_path, "r") as file:
-        lines = file.readlines()
-    coordinates = []
-    for line in lines:
-        parts = line.strip().split()
-        if len(parts) >= 2:
-            longitude = float(parts[0])
-            latitude = float(parts[1])
-            coordinates.append([longitude, latitude])
-    return coordinates
+# Functions from combine_geojson.py
+def write_geojson_to_file(geojson: Dict[str, Any], output_file_path: str) -> None:
+    """
+    Write GeoJSON data to a file.
 
-
-def create_geojson(coordinates):
-    """Create a GeoJSON structure from coordinates."""
-    geojson = {
-        "type": "FeatureCollection",
-        "features": [
-            {
-                "type": "Feature",
-                "geometry": {"type": "Polygon", "coordinates": [coordinates]},
-                "properties": {},
-            }
-        ],
-    }
-    return geojson
-
-
-def write_geojson_to_file(geojson, output_file_path):
-    """Write GeoJSON data to a file."""
+    Parameters
+    ----------
+    geojson : Dict[str, Any]
+        GeoJSON data structure to write.
+    output_file_path : str
+        Path where the GeoJSON file will be written.
+    """
     with open(output_file_path, "w") as file:
         json.dump(geojson, file, indent=4)
 
 
-def convert_txt_to_geojson(input_file_path, output_file_path):
-    """Convert a text coordinate file to GeoJSON format."""
-    coordinates = read_coordinates_from_file(input_file_path)
-    geojson = create_geojson(coordinates)
-    write_geojson_to_file(geojson, output_file_path)
-    return True
+def read_geojson(file_path: str) -> Dict[str, Any]:
+    """
+    Read a GeoJSON file.
 
+    Parameters
+    ----------
+    file_path : str
+        Path to the GeoJSON file to read.
 
-def standalone_basin_outline_conversion():
-    """Standalone function for basin outline conversion (backward compatibility)."""
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <input_file_path>")
-        sys.exit(1)
-
-    input_file_path = sys.argv[1]
-    input_path = Path(input_file_path)
-    if not input_path.is_file():
-        print(f"Error: File '{input_file_path}' not found.")
-        sys.exit(1)
-
-    output_file_path = str(input_path.with_suffix(".geojson"))
-
-    try:
-        convert_txt_to_geojson(input_file_path, output_file_path)
-        print(f"GeoJSON file created: {output_file_path}")
-    except Exception as e:
-        print(f"Error converting file: {e}")
-        sys.exit(1)
-
-
-# Functions from combine_geojson.py
-def generate_colors(n):
-    """Generate colors for GeoJSON features."""
-    from matplotlib import cm
-
-    cmap = cm.get_cmap("brg")  # You can choose different colormaps from matplotlib
-    color_list = [cmap(random.random()) for _ in range(n)]
-    colors = []
-    for i in range(n):
-        color = color_list[i]
-        stroke = f"#{int(color[0] * 255):02x}{int(color[1] * 255):02x}{int(color[2] * 255):02x}"
-        fill = f"#{int(color[0] * 255):02x}{int(color[1] * 255):02x}{int(color[2] * 255):02x}"
-        colors.append(
-            {"stroke": stroke, "fill": fill, "stroke-width": 1, "fill-opacity": 0.3}
-        )
-    return colors
-
-
-def read_geojson(file_path):
-    """Read a GeoJSON file."""
+    Returns
+    -------
+    Dict[str, Any]
+        The loaded GeoJSON data structure.
+    """
     with open(file_path, "r") as file:
         return json.load(file)
 
 
-def combine_geojson_inline(files, output_path):
-    """Combine multiple GeoJSON files into one."""
+def combine_geojson_inline(files: List[str], output_path: str) -> bool:
+    """
+    Combine multiple GeoJSON files into one.
+
+    Parameters
+    ----------
+    files : List[str]
+        List of paths to GeoJSON files to combine.
+    output_path : str
+        Path where the combined GeoJSON file will be written.
+
+    Returns
+    -------
+    bool
+        True if the combination was successful.
+
+    Notes
+    -----
+    Groups files by parent directory and applies consistent styling to all features.
+    Adds source file information to each feature's properties.
+    """
     combined_features = []
     groups = {}
     for b in files:
@@ -487,19 +438,14 @@ def combine_geojson_inline(files, output_path):
 
     print(f"Grouping files by directory: {groups}")
     # Use a consistent color for all features
-    color_text = "#ba0045"
-    colors = [
-        {
-            "stroke": color_text,
-            "fill": color_text,
-            "stroke-width": 1,
-            "fill-opacity": 0.3,
-        }
-    ] * len(groups)
-    color_cycle = cycle(colors)
+    color = {
+        "stroke": "#ba0045",
+        "fill": "#ba0045",
+        "stroke-width": 1,
+        "fill-opacity": 0.3,
+    }
 
     for parent, group in groups.items():
-        color = next(color_cycle)
         print(f"{parent} {color}")
         for file_path in group:
             geojson = read_geojson(file_path)
@@ -516,8 +462,23 @@ def combine_geojson_inline(files, output_path):
 
 
 # Functions from compare_geojson.py
-def extract_feature_info(feature):
-    """Extract key information from a feature for comparison."""
+def extract_feature_info(feature: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract key information from a feature for comparison.
+
+    Parameters
+    ----------
+    feature : Dict[str, Any]
+        A GeoJSON feature object.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Dictionary containing extracted information with keys:
+        - 'source_file': source file name
+        - 'signature': tuple of first 3 coordinate pairs for identification
+        - 'geometry_type': geometry type from the feature
+    """
     source_file = feature.get("properties", {}).get("source_file", "unknown")
 
     # Get first few coordinates to create a signature
@@ -535,8 +496,23 @@ def extract_feature_info(feature):
     }
 
 
-def check_internal_duplicates(feature_infos, file_name):
-    """Check for duplicate features within a single file."""
+def check_internal_duplicates(
+    feature_infos: List[Dict[str, Any]], file_name: str
+) -> None:
+    """
+    Check for duplicate features within a single file.
+
+    Parameters
+    ----------
+    feature_infos : List[Dict[str, Any]]
+        List of feature information dictionaries from extract_feature_info.
+    file_name : str
+        Name of the file being checked (for display purposes).
+
+    Notes
+    -----
+    Prints information about any duplicate features found.
+    """
     seen_signatures = {}
     duplicates = []
 
@@ -561,9 +537,26 @@ def check_internal_duplicates(feature_infos, file_name):
     print()
 
 
-def compare_geojson_files(file1_path, file2_path):
-    """Compare two GeoJSON files for duplicates and differences."""
-    print(f"Comparing:")
+def compare_geojson_files(file1_path: str, file2_path: str) -> None:
+    """
+    Compare two GeoJSON files for duplicates and differences.
+
+    Parameters
+    ----------
+    file1_path : str
+        Path to the first GeoJSON file to compare.
+    file2_path : str
+        Path to the second GeoJSON file to compare.
+
+    Notes
+    -----
+    Prints detailed comparison information including:
+    - Feature counts
+    - Source files in each file
+    - Internal duplicates within each file
+    - Differences between files
+    """
+    print("Comparing:")
     print(f"  File 1: {file1_path}")
     print(f"  File 2: {file2_path}")
     print()
@@ -645,8 +638,25 @@ def compare_geojson_files(file1_path, file2_path):
         print("All common source files have the same feature counts.")
 
 
-def compare_feature_order(file1_path, file2_path):
-    """Compare the order of features in two GeoJSON files."""
+def compare_feature_order(file1_path: str, file2_path: str) -> None:
+    """
+    Compare the order of features in two GeoJSON files.
+
+    Parameters
+    ----------
+    file1_path : str
+        Path to the first GeoJSON file to compare.
+    file2_path : str
+        Path to the second GeoJSON file to compare.
+
+    Notes
+    -----
+    Prints detailed comparison of feature ordering including:
+    - Feature counts
+    - Order of source files
+    - Whether orders are identical
+    - Whether files contain the same set of features
+    """
     # Read both files
     geojson1 = read_geojson(file1_path)
     geojson2 = read_geojson(file2_path)
@@ -664,11 +674,11 @@ def compare_feature_order(file1_path, file2_path):
 
     print("Order in File 1:")
     for i, source in enumerate(order1):
-        print(f"  {i+1:2d}: {source}")
+        print(f"  {i + 1:2d}: {source}")
 
     print("\nOrder in File 2:")
     for i, source in enumerate(order2):
-        print(f"  {i+1:2d}: {source}")
+        print(f"  {i + 1:2d}: {source}")
 
     # Check if orders are the same
     if order1 == order2:
@@ -679,7 +689,7 @@ def compare_feature_order(file1_path, file2_path):
         # Find differences
         for i, (src1, src2) in enumerate(zip(order1, order2)):
             if src1 != src2:
-                print(f"  Position {i+1}: File1='{src1}', File2='{src2}'")
+                print(f"  Position {i + 1}: File1='{src1}', File2='{src2}'")
 
     # Check if they contain the same set of features (just in different order)
     set1 = set(order1)
@@ -697,152 +707,71 @@ def compare_feature_order(file1_path, file2_path):
             print(f"\n❌ Features only in File 2: {only_2}")
 
 
-def create_test_coordinates_file(output_path):
-    """Create a test coordinates file for testing txt-to-geojson conversion."""
-    test_coordinates = """174.0 -41.5
-174.1 -41.5
-174.1 -41.4
-174.0 -41.4
-174.0 -41.5"""
+def run_comparison_mode(file1_path: str, file2_path: str) -> None:
+    """
+    Run comparison between two GeoJSON files.
 
-    with open(output_path, "w") as f:
-        f.write(test_coordinates)
+    Parameters
+    ----------
+    file1_path : str
+        Path to the first GeoJSON file to compare.
+    file2_path : str
+        Path to the second GeoJSON file to compare.
 
-    print(f"Created test coordinates file: {output_path}")
-    return output_path
-
-
-def test_txt_to_geojson_conversion():
-    """Test the txt-to-geojson conversion functionality."""
-    print("\n=== Testing txt-to-geojson conversion ===")
-
-    # Create test coordinates file
-    test_txt_path = Path(__file__).parent / "test_conversion.txt"
-    test_geojson_path = test_txt_path.with_suffix(".geojson")
-
-    try:
-        # Create test file
-        create_test_coordinates_file(str(test_txt_path))
-
-        # Convert to GeoJSON
-        print(f"Converting {test_txt_path} to {test_geojson_path}")
-        convert_txt_to_geojson(str(test_txt_path), str(test_geojson_path))
-
-        if test_geojson_path.exists():
-            print("✅ Conversion successful")
-
-            # Verify the content
-            with open(test_geojson_path, "r") as f:
-                geojson_content = json.load(f)
-
-            features = geojson_content.get("features", [])
-            if features and len(features) == 1:
-                coords = features[0].get("geometry", {}).get("coordinates", [])
-                if (
-                    coords and len(coords) > 0 and len(coords[0]) == 5
-                ):  # Should be 5 coordinate pairs
-                    print("✅ GeoJSON structure is correct")
-                    print(f"   Generated {len(coords[0])} coordinate pairs")
-                else:
-                    print("❌ GeoJSON structure is incorrect")
-            else:
-                print("❌ GeoJSON features are incorrect")
-        else:
-            print("❌ Conversion failed - file not created")
-
-        # Cleanup test files
-        if test_txt_path.exists():
-            test_txt_path.unlink()
-        if test_geojson_path.exists():
-            test_geojson_path.unlink()
-
-    except Exception as e:
-        print(f"❌ Test failed: {e}")
-
-
-def run_comparison_mode(velocity_modelling_path: Optional[str] = None):
-    """Run comparison between existing and generated files."""
+    Raises
+    ------
+    typer.Exit
+        If one or both files are missing.
+    """
     print("\n=== Running GeoJSON Comparison Mode ===")
 
-    # Get the directories
-    if velocity_modelling_path:
-        velocity_modelling_dir = Path(velocity_modelling_path).resolve()
-        # Validate that the provided path exists
-        if not velocity_modelling_dir.exists():
-            print(f"Error: Provided path does not exist: {velocity_modelling_dir}")
-            return
-    else:
-        script_path = Path(__file__).resolve()
-        velocity_modelling_dir = script_path.parent.parent
+    # Convert to Path objects and resolve
+    file1 = Path(file1_path).resolve()
+    file2 = Path(file2_path).resolve()
 
-    # Build paths for 2p07 files
-    existing_file = (
-        velocity_modelling_dir
-        / "data"
-        / "regional"
-        / "model_version_2p07_basins.geojson"
-    )
-    generated_file = (
-        velocity_modelling_dir / "generated_basin_geojsons" / "2p07_basins.geojson"
-    )
+    print("Comparing files:")
+    print(f"  File 1: {file1}")
+    print(f"  File 2: {file2}")
 
-    print(f"Looking for files:")
-    print(f"  Existing: {existing_file}")
-    print(f"  Generated: {generated_file}")
+    file1_exists = file1.exists()
+    file2_exists = file2.exists()
 
-    existing_exists = existing_file.exists()
-    generated_exists = generated_file.exists()
+    print(f"  File 1 exists: {'✓' if file1_exists else '✗'}")
+    print(f"  File 2 exists: {'✓' if file2_exists else '✗'}")
 
-    print(f"  Existing file exists: {'✓' if existing_exists else '✗'}")
-    print(f"  Generated file exists: {'✓' if generated_exists else '✗'}")
-
-    if existing_exists and generated_exists:
-        print("\nComparing 2p07 basin files...")
-        compare_geojson_files(str(existing_file), str(generated_file))
+    if file1_exists and file2_exists:
+        print("\nComparing GeoJSON files...")
+        compare_geojson_files(str(file1), str(file2))
         print("\n" + "=" * 50)
-        compare_feature_order(str(existing_file), str(generated_file))
+        compare_feature_order(str(file1), str(file2))
     else:
         print("\nCannot run comparison - one or both files are missing.")
-        if not existing_exists:
-            print(f"  Missing: {existing_file}")
-        if not generated_exists:
-            print(f"  Missing: {generated_file}")
-            print(
-                f"  Try running: python generate_model_outlines.py (to generate files first)"
-            )
-
-
-def convert_txt_to_geojson_cmd(input_file: str):
-    """Convert a single txt coordinate file to GeoJSON format."""
-    input_path = Path(input_file)
-    if not input_path.is_file():
-        print(f"Error: File '{input_file}' not found.")
-        raise typer.Exit(1)
-
-    output_file = str(input_path.with_suffix(".geojson"))
-    try:
-        convert_txt_to_geojson(input_file, output_file)
-        print(f"GeoJSON file created: {output_file}")
-    except Exception as e:
-        print(f"Error converting file: {e}")
+        if not file1_exists:
+            print(f"  Missing: {file1}")
+        if not file2_exists:
+            print(f"  Missing: {file2}")
         raise typer.Exit(1)
 
 
-def compare_cmd(velocity_modelling_path: Optional[str] = None):
-    """Compare generated vs existing files (specifically 2p07 basin files)."""
-    run_comparison_mode(velocity_modelling_path)
+def compare_cmd(file1_path: str, file2_path: str) -> None:
+    """
+    Compare two GeoJSON files for differences and duplicates.
 
-
-def test_cmd():
-    """Test txt-to-geojson conversion functionality using embedded test data."""
-    test_txt_to_geojson_conversion()
+    Parameters
+    ----------
+    file1_path : str
+        Path to the first GeoJSON file to compare.
+    file2_path : str
+        Path to the second GeoJSON file to compare.
+    """
+    run_comparison_mode(file1_path, file2_path)
 
 
 @app.command("generate")
 def generate_cmd(
     path: Optional[str] = typer.Option(
         None, "--path", "-p", help="Path to the velocity_modelling directory"
-    )
+    ),
 ):
     """
     Generate all model outline files (default command).
@@ -856,26 +785,11 @@ def generate_cmd(
 
 @app.command("compare")
 def compare_command(
-    path: Optional[str] = typer.Option(
-        None, "--path", "-p", help="Path to the velocity_modelling directory"
-    )
+    file1: str = typer.Argument(help="Path to the first GeoJSON file to compare"),
+    file2: str = typer.Argument(help="Path to the second GeoJSON file to compare"),
 ):
-    """Compare generated vs existing files (specifically 2p07 basin files)."""
-    run_comparison_mode(path)
-
-
-@app.command("test")
-def test_command():
-    """Test txt-to-geojson conversion functionality using embedded test data."""
-    test_cmd()
-
-
-@app.command("convert")
-def convert_command(
-    input_file: str = typer.Argument(..., help="Path to the txt file to convert")
-):
-    """Convert a single txt coordinate file to GeoJSON format."""
-    convert_txt_to_geojson_cmd(input_file)
+    """Compare two GeoJSON files for differences, duplicates, and feature order."""
+    run_comparison_mode(file1, file2)
 
 
 @app.callback(invoke_without_command=True)
