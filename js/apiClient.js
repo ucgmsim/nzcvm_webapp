@@ -6,7 +6,8 @@ let countdownIntervalId = null;
 // Function to collect all configuration data from the form for config file download
 function getConfigurationDataForFile() {
     const selectedFilename = document.getElementById('model-version').value;
-    const versionMatch = selectedFilename.match(/model_version_(\d+)p(\d+)/);
+    // Extract version from geojson filename (e.g., "2p03_basins.geojson.gz" -> "2.03")
+    const versionMatch = selectedFilename.match(/(\d+)p(\d+)_basins\.geojson\.gz/);
     const modelVersion = versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
 
     return {
@@ -136,7 +137,8 @@ async function generateModelAndDownload() {
         CALL_TYPE: 'GENERATE_VELOCITY_MOD',
         MODEL_VERSION: (() => {
             const selectedFilename = document.getElementById('model-version').value;
-            const versionMatch = selectedFilename.match(/model_version_(\d+)p(\d+)/);
+            // Extract version from geojson filename (e.g., "2p03_basins.geojson.gz" -> "2.03")
+            const versionMatch = selectedFilename.match(/(\d+)p(\d+)_basins\.geojson\.gz/);
             return versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
         })(),
         ORIGIN_LAT: parseFloat(document.getElementById('origin-lat').value),

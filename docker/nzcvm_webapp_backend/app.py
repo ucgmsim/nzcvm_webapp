@@ -2,6 +2,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 import logging
+import re
 
 from flask import Flask, request, send_file, jsonify, abort, Response
 from flask_cors import CORS
@@ -135,6 +136,63 @@ def zip_output_files(directory_to_zip: Path, zip_path: Path) -> None:
 
 
 # --- Flask Route ---
+@app.route("/model-versions/list", methods=["GET"])
+def list_model_versions() -> Response:
+    """List available model versions from YAML files in the model versions directory.
+
+    Returns
+    -------
+    Response
+        JSON response containing a list of available model versions with their
+        corresponding GeoJSON files.
+    """
+    try:
+        if not MODEL_VERSIONS_DIR.exists():
+            return jsonify({"error": "Model versions directory not found"}), 404
+
+        if not GEOJSON_DIR.exists():
+            return jsonify({"error": "GeoJSON directory not found"}), 404
+
+        # Find YAML model version files
+        model_versions = []
+        for yaml_path in MODEL_VERSIONS_DIR.glob("*.yaml"):
+            # Extract version from filename (e.g., "2p03.yaml" -> "2p03")
+            version_name = yaml_path.stem
+
+            # Look for corresponding GeoJSON file
+            geojson_filename = f"{version_name}_basins.geojson.gz"
+            geojson_path = GEOJSON_DIR / geojson_filename
+
+            if geojson_path.exists():
+                # Convert version format (e.g., "2p03" -> "2.03")
+                version_match = re.match(r"(\d+)p(\d+)", version_name)
+                if version_match:
+                    display_version = f"{version_match[1]}.{version_match[2]}"
+                else:
+                    display_version = version_name
+
+                model_versions.append(
+                    {
+                        "version": version_name,
+                        "display_version": display_version,
+                        "geojson_file": geojson_filename,
+                        "yaml_file": yaml_path.name,
+                    }
+                )
+
+        return jsonify(
+            {
+                "model_versions": sorted(
+                    model_versions, key=lambda x: x["version"], reverse=True
+                )
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error listing model versions: {e}")
+        return jsonify({"error": "Failed to list model versions"}), 500
+
+
 @app.route("/geojson/list", methods=["GET"])
 def list_geojson_files() -> Response:
     """List available compressed GeoJSON files from the regional directory.

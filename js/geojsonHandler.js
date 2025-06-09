@@ -3,16 +3,16 @@
 // Variables for GeoJSON overlay
 let currentGeoJSONLayer = null;
 let legend = null;
-let availableGeoJSONFiles = [];
+let availableModelVersions = [];
 
-// Function to load available GeoJSON files from backend and populate dropdown
-async function loadAvailableGeoJSONFiles() {
+// Function to load available model versions from backend and populate dropdown
+async function loadAvailableModelVersions() {
     try {
         // Create AbortController for timeout handling (30 seconds for file list)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        const response = await fetch('geojson/list', { // Relative path since we're served from /nzcvm_webapp/
+        const response = await fetch('model-versions/list', { // New endpoint for model versions
             signal: controller.signal
         });
 
@@ -22,36 +22,31 @@ async function loadAvailableGeoJSONFiles() {
         }
 
         const data = await response.json();
-        availableGeoJSONFiles = data.files || [];
+        availableModelVersions = data.model_versions || [];
 
         populateModelVersionDropdown();
 
     } catch (error) {
-        console.error('Error loading available GeoJSON files:', error);
+        console.error('Error loading available model versions:', error);
         if (error.name === 'AbortError') {
-            alert('Request timed out while loading available GeoJSON files. Please try again.');
+            alert('Request timed out while loading available model versions. Please try again.');
         } else {
-            alert('Failed to load available GeoJSON files from backend. Please check your connection.');
+            alert('Failed to load available model versions from backend. Please check your connection.');
         }
     }
 }
 
-// Function to populate model version dropdown based on available files
+// Function to populate model version dropdown based on available model versions
 function populateModelVersionDropdown() {
     const dropdown = document.getElementById('model-version');
     dropdown.innerHTML = ''; // Clear existing options
 
-    // Create options based on available files
-    availableGeoJSONFiles.forEach(filename => {
-        // Extract version from filename (e.g., "model_version_2p03_basins.geojson.gz" -> "2.03")
-        const versionMatch = filename.match(/model_version_(\d+)p(\d+)/);
-        if (versionMatch) {
-            const version = `${versionMatch[1]}.${versionMatch[2]}`;
-            const option = document.createElement('option');
-            option.value = filename;
-            option.textContent = version;
-            dropdown.appendChild(option);
-        }
+    // Create options based on available model versions
+    availableModelVersions.forEach(modelVersion => {
+        const option = document.createElement('option');
+        option.value = modelVersion.geojson_file; // Use geojson filename as value
+        option.textContent = modelVersion.display_version; // Display formatted version
+        dropdown.appendChild(option);
     });
 }
 
@@ -167,8 +162,8 @@ document.getElementById('model-version').addEventListener('change', function () 
 
 // Load initial GeoJSON and populate dropdown on page load
 document.addEventListener('DOMContentLoaded', async function () {
-    // First load available files from backend
-    await loadAvailableGeoJSONFiles();
+    // First load available model versions from backend
+    await loadAvailableModelVersions();
 
     // Then load the initial GeoJSON based on the first available option
     const dropdown = document.getElementById('model-version');
