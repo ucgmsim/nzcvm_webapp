@@ -98,24 +98,21 @@ Finally, to start the service, and make the web app publicly available
 
 ## Modifying the `nzcvm_webapp` web app
 
-If the the `nzcvm_webapp` web app is modified, a new Docker image that contains the modified
-`nzcvm_webapp` code needs to be built and pushed to Docker Hub. This can be done with any
-machine that has Docker.
+If the `nzcvm_webapp` web app has been modified, new container images need to be built
+and pushed to Docker Hub. This can be done with any machine that has Docker. 
+The frontend and backend components of this web app are in separate containers that are
+built according to the Dockerfiles in the frontend and backend folders. The containers
+are configured to work together by the [docker-compose.yml](docker-compose.yml) file 
+in the top level of the repo.
 
-[`Dockerfile`](docker/Dockerfile) contains instructions for building the image of the 
-Docker container. To build the Docker container image, open a terminal and navigate to the 
-`docker` directory in the `nzcvm_webapp` repo 
-  * `cd /location/of/repo/docker/folder`
+To build the Docker container images, open a terminal and navigate to the top level of
+the `nzcvm_webapp` repo
+  * `cd /location/of/repo/`
+  * `docker compose build`
 
-The build process will try to re-use cached `nzcvm_webapp` files by default, so if the `nzcvm_webapp` 
-package has been modified, you should build with the `--no-cache` flag:
- * `docker build --no-cache -t earthquakesuc/nzcvm_webapp .`
-
- (If you can keep cached files, remove the `--no-cache` flag from the command)
-
-To push the newly built container image to Docker Hub, ensure you are logged in to
+To push the newly built container images to Docker Hub, ensure you are logged in to
 our Docker Hub account (earthquakesuc), and then run
-  * `docker push earthquakesuc/nzcvm_webapp`
+  * `docker compose push`
 
 ## File summaries
 
