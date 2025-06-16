@@ -18,8 +18,20 @@ function updateGridPointDisplay() {
     const formatNumber = (num) => isNaN(num) ? '---' : num.toLocaleString();
     // Format runtime to 1 decimal place
     const formatTime = (time) => isNaN(time) ? '---' : time.toFixed(1);
-    // Format model size to 2 decimal places
-    const formatSize = (size) => isNaN(size) ? '---' : size.toFixed(2);
+    // Format model size with appropriate units (MB or GB)
+    const formatSize = (sizeGB) => {
+        if (isNaN(sizeGB)) return '---';
+
+        // Convert to MB for comparison
+        const sizeMB = sizeGB * 1000;
+
+        // If less than 1 GB (1000 MB), display in MB
+        if (sizeMB < 1000) {
+            return `${sizeMB.toFixed(1)} MB`;
+        } else {
+            return `${sizeGB.toFixed(2)} GB`;
+        }
+    };
 
     document.querySelector('#grid-nx-display span').textContent = formatNumber(gridData.nx);
     document.querySelector('#grid-ny-display span').textContent = formatNumber(gridData.ny);

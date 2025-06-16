@@ -24,7 +24,7 @@ function getConfigurationDataForFile() {
         'EXTENT_LATLON_SPACING': parseFloat(document.getElementById('xy-spacing').value),
         'MIN_VS': parseFloat(document.getElementById('min-vs').value),
         'TOPO_TYPE': document.getElementById('topo-type').value,
-        'OUTPUT_DIR': '/tmp/nzcvm_output'
+        'OUTPUT_DIR': document.getElementById('output-dir').value  // Use form value for config file download
     };
 }
 
