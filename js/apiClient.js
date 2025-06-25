@@ -49,6 +49,57 @@ function downloadConfigFile() {
     URL.revokeObjectURL(url);
 }
 
+// Function to copy the configuration file content to clipboard
+async function copyConfigToClipboard() {
+    try {
+        const configData = getConfigurationDataForFile();
+
+        // Create configuration file content string
+        const config = Object.entries(configData)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+
+        // Use the modern Clipboard API
+        await navigator.clipboard.writeText(config);
+
+        // Show temporary success feedback
+        const copyBtn = document.getElementById('copyBtn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.backgroundColor = '#28a745';
+
+        // Reset button text and color after 2 seconds
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.backgroundColor = '';
+        }, 2000);
+
+    } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+
+        // Fallback: Show alert with the content
+        const configData = getConfigurationDataForFile();
+        const config = Object.entries(configData)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+
+        // Show temporary error feedback
+        const copyBtn = document.getElementById('copyBtn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copy failed - check console';
+        copyBtn.style.backgroundColor = '#dc3545';
+
+        // Reset button text and color after 3 seconds
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.backgroundColor = '';
+        }, 3000);
+
+        // As a fallback, show the config in an alert for manual copy
+        alert('Failed to copy automatically. Here is the configuration:\n\n' + config);
+    }
+}
+
 // Function to trigger the backend model generation and download results
 async function generateModelAndDownload() {
     // Clear any existing timer interval
@@ -237,6 +288,9 @@ async function generateModelAndDownload() {
     }
 }
 
+
+// Add click event to copy config button
+document.getElementById('copyBtn').addEventListener('click', copyConfigToClipboard);
 
 // Add click event to download config button
 document.getElementById('downloadBtn').addEventListener('click', downloadConfigFile);
