@@ -8,7 +8,7 @@ WORKDIR /app
 # The source path is relative to the build context defined in docker-compose.yml
 COPY docker/nzcvm_webapp_backend/requirements.txt docker/nzcvm_webapp_backend/generate_model_outlines.py /app/
 
-RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev
+RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev
 # Explicitly set the path to the llvm-config executable for the llvmlite build process.
 # The llvmlite installation script searches for an executable named 'llvm-config' by default.
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
