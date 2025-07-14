@@ -8,6 +8,5 @@ typer>=0.7.0
 # Configuration file parsing
 PyYAML>=6.0
 
-# Domain-specific dependency from GitHub
-git+https://github.com/ucgmsim/velocity_modelling.git@main
+Velocity_Model @ git+https://github.com/ucgmsim/Velocity-Model.git
 

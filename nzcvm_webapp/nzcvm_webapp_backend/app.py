@@ -10,7 +10,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, jsonify, request, send_file
 from flask_cors import CORS
 
-import helpers
+from velocity_modelling.nzcvm_webapp_backend import helpers
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
