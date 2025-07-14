@@ -19,9 +19,19 @@ RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modellin
 # Generate outlines for all model versions as geojson.gz.
 RUN python generate_model_outlines.py generate --path /usr/local/lib/python3.12/site-packages/velocity_modelling/
 
-# Install dependencies from requirements.txt (including Flask, Flask-CORS, Gunicorn)
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the entire nzcvm_webapp package source code
+COPY . /tmp/nzcvm_webapp_src/
+
+# Install the nzcvm_webapp package
+RUN pip install --no-cache-dir /tmp/nzcvm_webapp_src/
+
+# Install gunicorn outside of requirements.txt to pass deptry checks as it is not a
+# direct dependency of the nzcvm_webapp package but it is required to run the Flask app
+# in production.
 RUN pip install gunicorn>=20.0
+
+# Clean up the temporary source directory
+RUN rm -rf /tmp/nzcvm_webapp_src
 
 # Expose port 5000 for inter-container communication (Gunicorn listens here).
 # This informs Docker the container uses this port; it does not publish
@@ -29,12 +39,7 @@ RUN pip install gunicorn>=20.0
 EXPOSE 5000
 
 # Define environment variable
-ENV FLASK_APP=app.py
-
-# Copy the Flask application files (app.py and helpers.py) into the container at /app
-# This is done LAST to ensure that changes to these files don't invalidate the package cache
-COPY nzcvm_webapp/nzcvm_webapp_backend/app.py nzcvm_webapp/nzcvm_webapp_backend/helpers.py /app/
-
+ENV FLASK_APP=nzcvm_webapp.nzcvm_webapp_backend.app:app
 
 # Run app.py when the container launches using Gunicorn
 # Gunicorn is a Python WSGI HTTP server for UNIX. It serves the Flask app in production.
@@ -42,5 +47,5 @@ COPY nzcvm_webapp/nzcvm_webapp_backend/app.py nzcvm_webapp/nzcvm_webapp_backend/
 # --workers 3: Number of worker processes. Each worker handles requests independently so
 # using 3 workers will allow the app to generate 3 different velocity models simultaneously.
 # --timeout 3600: Set worker timeout to 3600 seconds (1 hour)
-# app:app: Look for the Flask app instance named 'app' in the 'app.py' module
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "3600", "app:app"]
+# nzcvm_webapp.nzcvm_webapp_backend.app:app: Look for the Flask app instance named 'app' in the module
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "3600", "nzcvm_webapp.nzcvm_webapp_backend.app:app"]

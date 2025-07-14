@@ -85,7 +85,7 @@ def list_model_versions() -> Response:
                 )
 
         # Custom sorting function to sort by version number (descending) and then by descriptor presence
-        def sort_key(model):
+        def sort_key(model: dict[str, str]) -> tuple[int, int, int, str]:
             version_name = model["version"]
 
             # Extract base version number for primary sorting
@@ -108,7 +108,7 @@ def list_model_versions() -> Response:
 
         return jsonify({"model_versions": sorted(model_versions, key=sort_key)})
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 # Catch-all for unexpected errors in API endpoint
         logger.error(f"Error listing model versions: {e}")
         return jsonify({"error": "Failed to list model versions"}), 500
 
@@ -133,7 +133,7 @@ def list_geojson_files() -> Response:
 
         return jsonify({"files": sorted(geojson_files, reverse=True)})
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 # Catch-all for unexpected errors in API endpoint
         logger.error(f"Error listing GeoJSON files: {e}")
         return jsonify({"error": "Failed to list GeoJSON files"}), 500
 
@@ -175,7 +175,7 @@ def serve_geojson_file(filename: str) -> Response:
         response.headers["Content-Type"] = "application/json"
         return response
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 # Catch-all for unexpected errors in API endpoint
         logger.error(f"Error serving GeoJSON file {filename}: {e}")
         return jsonify({"error": "Failed to serve GeoJSON file"}), 500
 
@@ -260,7 +260,7 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         )
         try:
             helpers.run_nzcvm_process(config_path, output_dir)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 # Catch-all for unexpected errors in API endpoint
             logger.error(f"NZCVM process failed: {e}")
             return (
                 jsonify(
@@ -291,7 +291,7 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
 
         try:
             helpers.zip_output_files(output_dir, zip_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 # Catch-all for unexpected errors in API endpoint
             logger.error(f"Error during zipping: {e}")
             return jsonify({"error": f"Failed to zip output files: {e}"}), 500
 

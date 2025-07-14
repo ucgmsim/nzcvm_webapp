@@ -38,7 +38,7 @@ Additional Commands:
 import gzip
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import typer
 import yaml
@@ -51,7 +51,7 @@ app = typer.Typer(
 )
 
 
-def find_model_version_files(model_versions_dir: str) -> List[str]:
+def find_model_version_files(model_versions_dir: str) -> list[str]:
     """
     Find all YAML files in the model_versions directory.
 
@@ -62,14 +62,14 @@ def find_model_version_files(model_versions_dir: str) -> List[str]:
 
     Returns
     -------
-    List[str]
+    list[str]
         Sorted list of absolute paths to YAML files found in the directory.
     """
     model_dir = Path(model_versions_dir)
     return sorted(list(model_dir.glob("*.yaml")))
 
 
-def read_yaml_model_version(yaml_file: str) -> List[str]:
+def read_yaml_model_version(yaml_file: str) -> list[str]:
     """
     Read a YAML model version file and extract basin names.
 
@@ -80,8 +80,8 @@ def read_yaml_model_version(yaml_file: str) -> List[str]:
 
     Returns
     -------
-    List[str]
-        List of basin names extracted from the 'basins' key in the YAML file.
+    list[str]
+        list of basin names extracted from the 'basins' key in the YAML file.
         Returns empty list if 'basins' key is not found.
     """
     with open(yaml_file, "r") as f:
@@ -91,7 +91,7 @@ def read_yaml_model_version(yaml_file: str) -> List[str]:
     return basins
 
 
-def find_basin_files(basin_name: str, regional_dir: str) -> List[str]:
+def find_basin_files(basin_name: str, regional_dir: str) -> list[str]:
     """
     Find GeoJSON basin files for a given basin name in the regional directory.
 
@@ -107,7 +107,7 @@ def find_basin_files(basin_name: str, regional_dir: str) -> List[str]:
 
     Returns
     -------
-    List[str]
+    list[str]
         Sorted list of paths to GeoJSON files found in the basin's subdirectory.
         Returns empty list if no files are found or the basin directory doesn't exist.
     """
@@ -155,14 +155,14 @@ def ensure_geojson_exists(file_path: str) -> Optional[str]:
         return None
 
 
-def combine_geojson_files(geojson_files: List[str], output_path: str) -> None:
+def combine_geojson_files(geojson_files: list[str], output_path: str) -> None:
     """
     Combine multiple GeoJSON files into one.
 
     Parameters
     ----------
-    geojson_files : List[str]
-        List of paths to GeoJSON files to combine.
+    geojson_files : list[str]
+        list of paths to GeoJSON files to combine.
     output_path : str
         Path where the combined GeoJSON file will be written.
 
@@ -174,7 +174,7 @@ def combine_geojson_files(geojson_files: List[str], output_path: str) -> None:
     print(f"Combining {len(geojson_files)} GeoJSON files into {output_path}")
     try:
         combine_geojson_inline(geojson_files, output_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 # Re-raise as RuntimeError for consistent error handling
         raise RuntimeError(f"Error combining GeoJSON files: {e}") from e
 
 
@@ -204,7 +204,7 @@ def compress_geojson(geojson_path: str) -> None:
         # Delete the original GeoJSON file after successful compression
         Path(geojson_path).unlink()
         print(f"Deleted original file {geojson_path}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 # Re-raise as RuntimeError for consistent error handling
         raise RuntimeError(f"Error compressing {geojson_path}: {e}") from e
 
 
@@ -351,7 +351,7 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
         try:
             process_model_version(model_file, str(regional_dir), str(output_dir))
             success_count += 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 # Catch all errors to continue processing other files
             print(f"Error processing {model_file}: {e}")
 
     print(
@@ -369,13 +369,13 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
 
 
 # Functions from combine_geojson.py
-def write_geojson_to_file(geojson: Dict[str, Any], output_file_path: str) -> None:
+def write_geojson_to_file(geojson: dict[str, Any], output_file_path: str) -> None:
     """
     Write GeoJSON data to a file.
 
     Parameters
     ----------
-    geojson : Dict[str, Any]
+    geojson : dict[str, Any]
         GeoJSON data structure to write.
     output_file_path : str
         Path where the GeoJSON file will be written.
@@ -384,7 +384,7 @@ def write_geojson_to_file(geojson: Dict[str, Any], output_file_path: str) -> Non
         json.dump(geojson, file, indent=4)
 
 
-def read_geojson(file_path: str) -> Dict[str, Any]:
+def read_geojson(file_path: str) -> dict[str, Any]:
     """
     Read a GeoJSON file.
 
@@ -395,21 +395,21 @@ def read_geojson(file_path: str) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         The loaded GeoJSON data structure.
     """
     with open(file_path, "r") as file:
         return json.load(file)
 
 
-def combine_geojson_inline(files: List[str], output_path: str) -> bool:
+def combine_geojson_inline(files: list[str], output_path: str) -> bool:
     """
     Combine multiple GeoJSON files into one.
 
     Parameters
     ----------
-    files : List[str]
-        List of paths to GeoJSON files to combine.
+    files : list[str]
+        list of paths to GeoJSON files to combine.
     output_path : str
         Path where the combined GeoJSON file will be written.
 
@@ -458,18 +458,18 @@ def combine_geojson_inline(files: List[str], output_path: str) -> bool:
 
 
 # Functions from compare_geojson.py
-def extract_feature_info(feature: Dict[str, Any]) -> Dict[str, Any]:
+def extract_feature_info(feature: dict[str, Any]) -> dict[str, Any]:
     """
     Extract key information from a feature for comparison.
 
     Parameters
     ----------
-    feature : Dict[str, Any]
+    feature : dict[str, Any]
         A GeoJSON feature object.
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Dictionary containing extracted information with keys:
         - 'source_file': source file name
         - 'signature': tuple of first 3 coordinate pairs for identification
@@ -493,15 +493,15 @@ def extract_feature_info(feature: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def check_internal_duplicates(
-    feature_infos: List[Dict[str, Any]], file_name: str
+    feature_infos: list[dict[str, Any]], file_name: str
 ) -> None:
     """
     Check for duplicate features within a single file.
 
     Parameters
     ----------
-    feature_infos : List[Dict[str, Any]]
-        List of feature information dictionaries from extract_feature_info.
+    feature_infos : list[dict[str, Any]]
+        list of feature information dictionaries from extract_feature_info.
     file_name : str
         Name of the file being checked (for display purposes).
 
