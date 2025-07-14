@@ -1,12 +1,6 @@
-# Core web framework
 Flask>=2.0
 Flask-CORS>=3.0
-
-# CLI support
 typer>=0.7.0
-
-# Configuration file parsing
 PyYAML>=6.0
-
-Velocity_Model @ git+https://github.com/ucgmsim/Velocity-Model.git
+velocity_modelling @ git+https://github.com/ucgmsim/velocity_modelling.git
 
