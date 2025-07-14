@@ -62,16 +62,10 @@ def list_model_versions() -> Response:
                 # Convert version format (e.g., "2p03" -> "2.03", "2p03_nelson_only" -> "2.03 Nelson Only")
                 if "_" in version_name:
                     # Split on underscore to get base version and descriptor
-                    parts = version_name.split("_", 1)
-                    base_version = parts[0]
-                    descriptor = parts[1]
+                    base_version, descriptor = version_name.split("_", 1)
 
                     # Convert base version format (e.g., "2p03" -> "2.03")
-                    version_match = re.match(r"(\d+)p(\d+)", base_version)
-                    if version_match:
-                        base_display = f"{version_match[1]}.{version_match[2]}"
-                    else:
-                        base_display = base_version
+                    base_display = base_version.replace("p", ".")
 
                     # Format descriptor (replace underscores with spaces and title case)
                     formatted_descriptor = descriptor.replace("_", " ").title()
@@ -80,7 +74,7 @@ def list_model_versions() -> Response:
                     # No descriptor, just convert base version
                     version_match = re.match(r"(\d+)p(\d+)", version_name)
                     if version_match:
-                        display_version = f"{version_match[1]}.{version_match[2]}"
+                        display_version = base_version.replace("p", ".")
                     else:
                         display_version = version_name
 
@@ -90,6 +84,7 @@ def list_model_versions() -> Response:
                         "display_version": display_version,
                         "geojson_file": geojson_filename,
                         "yaml_file": yaml_path.name,
+                        "base_version": base_version,
                     }
                 )
 
@@ -98,9 +93,7 @@ def list_model_versions() -> Response:
             version_name = model["version"]
 
             # Extract base version number for primary sorting
-            base_version = (
-                version_name.split("_")[0] if "_" in version_name else version_name
-            )
+            base_version = model["base_version"]
             version_match = re.match(r"(\d+)p(\d+)", base_version)
             if version_match:
                 # Convert to comparable format: higher numbers first
@@ -261,7 +254,7 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         temp_dir = Path(temp_dir_str)
         # Put the output directory inside the temp directory of the container
         output_dir = temp_dir / "nzcvm_output"
-        output_dir.mkdir(parents=True, exist_ok=True)  # Ensure output dir exists
+        output_dir.mkdir()  # Ensure output dir exists
 
         # Create the config file within the temp directory
         config_path = create_config_file(config_data, temp_dir)
