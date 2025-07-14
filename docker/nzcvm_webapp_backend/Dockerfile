@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy the requirements file and generate_model_outlines.py script into the container at /app
 # The source path is relative to the build context defined in docker-compose.yml
-COPY docker/nzcvm_webapp_backend/requirements.txt docker/nzcvm_webapp_backend/generate_model_outlines.py /app/
+COPY requirements.txt docker/nzcvm_webapp_backend/generate_model_outlines.py /app/
 
 RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev
 # Explicitly set the path to the llvm-config executable for the llvmlite build process.
@@ -30,9 +30,9 @@ EXPOSE 5000
 # Define environment variable
 ENV FLASK_APP=app.py
 
-# Copy the Flask application file (app.py) into the container at /app
-# This is done LAST to ensure that changes to app.py don't invalidate the package cache
-COPY docker/nzcvm_webapp_backend/app.py /app/
+# Copy the Flask application files (app.py and helpers.py) into the container at /app
+# This is done LAST to ensure that changes to these files don't invalidate the package cache
+COPY docker/nzcvm_webapp_backend/app.py docker/nzcvm_webapp_backend/helpers.py /app/
 
 
 # Run app.py when the container launches using Gunicorn
