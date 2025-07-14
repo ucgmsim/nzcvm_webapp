@@ -30,6 +30,10 @@ RUN pip install --no-cache-dir /tmp/nzcvm_webapp_src/
 # in production.
 RUN pip install gunicorn>=20.0
 
+# Copy startup script and make it executable
+COPY nzcvm_webapp/nzcvm_webapp_backend/startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
 # Clean up the temporary source directory
 RUN rm -rf /tmp/nzcvm_webapp_src
 
@@ -41,11 +45,5 @@ EXPOSE 5000
 # Define environment variable
 ENV FLASK_APP=nzcvm_webapp.nzcvm_webapp_backend.app:app
 
-# Run app.py when the container launches using Gunicorn
-# Gunicorn is a Python WSGI HTTP server for UNIX. It serves the Flask app in production.
-# --bind 0.0.0.0:5000: Listen on all network interfaces within the container on port 5000
-# --workers 3: Number of worker processes. Each worker handles requests independently so
-# using 3 workers will allow the app to generate 3 different velocity models simultaneously.
-# --timeout 3600: Set worker timeout to 3600 seconds (1 hour)
-# nzcvm_webapp.nzcvm_webapp_backend.app:app: Look for the Flask app instance named 'app' in the module
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "3600", "nzcvm_webapp.nzcvm_webapp_backend.app:app"]
+# Use startup script to download data and start the application
+CMD ["/app/startup.sh"]
