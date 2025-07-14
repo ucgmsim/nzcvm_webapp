@@ -66,11 +66,7 @@ def find_model_version_files(model_versions_dir: str) -> List[str]:
         Sorted list of absolute paths to YAML files found in the directory.
     """
     model_dir = Path(model_versions_dir)
-    model_files = []
-    for file in model_dir.iterdir():
-        if file.suffix == ".yaml":
-            model_files.append(str(file))
-    return sorted(model_files)
+    return sorted(list(model_dir.glob("*.yaml")))
 
 
 def read_yaml_model_version(yaml_file: str) -> List[str]:

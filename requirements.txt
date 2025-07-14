@@ -2,8 +2,12 @@
 Flask>=2.0
 Flask-CORS>=3.0
 
-# Production WSGI server
-gunicorn>=20.0
-
 # CLI support
 typer>=0.7.0
+
+# Configuration file parsing
+PyYAML>=6.0
+
+# Domain-specific dependency from GitHub
+git+https://github.com/ucgmsim/velocity_modelling.git@main
+

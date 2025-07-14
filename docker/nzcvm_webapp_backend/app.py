@@ -10,8 +10,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, jsonify, request, send_file
 from flask_cors import CORS
 
-# Import helper functions
-from helpers import create_config_file, run_nzcvm_process, zip_output_files
+import helpers
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -72,11 +71,8 @@ def list_model_versions() -> Response:
                     display_version = f"{base_display} {formatted_descriptor}"
                 else:
                     # No descriptor, just convert base version
-                    version_match = re.match(r"(\d+)p(\d+)", version_name)
-                    if version_match:
-                        display_version = base_version.replace("p", ".")
-                    else:
-                        display_version = version_name
+                    base_version = version_name  # Set base_version for versions without descriptors
+                    display_version = base_version.replace("p", ".")
 
                 model_versions.append(
                     {
@@ -257,13 +253,13 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
         output_dir.mkdir()  # Ensure output dir exists
 
         # Create the config file within the temp directory
-        config_path = create_config_file(config_data, temp_dir)
+        config_path = helpers.create_config_file(config_data, temp_dir)
 
         logger.info(
             f"Attempting to run NZCVM process. Config: {config_path}, Output directory: {output_dir}"
         )
         try:
-            run_nzcvm_process(config_path, output_dir)
+            helpers.run_nzcvm_process(config_path, output_dir)
         except Exception as e:
             logger.error(f"NZCVM process failed: {e}")
             return (
@@ -287,14 +283,14 @@ def handle_run_nzcvm() -> Response | tuple[Response, int]:
 
         # Create a copy of the config file the in the output directory so it is
         # included in the zip file for download
-        _ = create_config_file(config_data, output_dir)
+        _ = helpers.create_config_file(config_data, output_dir)
 
         # Create zip file path within the temp directory
         zip_filename = "nzcvm_output.zip"
         zip_path = temp_dir / zip_filename
 
         try:
-            zip_output_files(output_dir, zip_path)
+            helpers.zip_output_files(output_dir, zip_path)
         except Exception as e:
             logger.error(f"Error during zipping: {e}")
             return jsonify({"error": f"Failed to zip output files: {e}"}), 500

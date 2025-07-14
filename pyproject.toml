@@ -48,7 +48,7 @@ convention = "numpy"
 
 [tool.ruff.lint.isort]
 known-first-party = [
-    "velocity_modelling",
+    "velocity_modelling","helpers"
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -57,4 +57,5 @@ known-first-party = [
 # Ignore docstring errors in tests folder
 "tests/**.py" = ["D"]
 
-
+[tool.deptry]
+known_first_party = ["helpers", "velocity_modelling"]
