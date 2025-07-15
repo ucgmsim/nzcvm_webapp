@@ -1,0 +1,50 @@
+# Starts the [Unit] section, which contains metadata and defines relationships with other services.
+[Unit]
+
+# Provides a short description of the service
+Description=NZCVM Webapp Service
+
+# Starts the [Service] section, which controls how the service process executes and behaves.
+[Service]
+
+# Run the service as the nzcvm_webapp user.
+User=nzcvm_webapp
+
+# Set the Docker socket to use for the nzcvm_webapp user where 1009 is the 
+# User ID (UID) given by `id -u` when run as the nzcvm_webapp user.
+Environment="DOCKER_HOST=unix:///run/user/1009/docker.sock"
+
+# Add Type and RemainAfterExit for docker compose detached mode
+# Type=oneshot: Indicates that the ExecStart command runs once and exits.
+# RemainAfterExit=yes: Keeps the service unit considered 'active' even after the ExecStart process exits.
+# This combination is needed for services that start background tasks, like 'docker compose up -d'.
+Type=oneshot
+RemainAfterExit=yes
+
+# Sets the start timeout to 0 seconds, meaning systemd will wait indefinitely for the service to start.
+TimeoutStartSec=0
+
+# ExecStartPre commands are run before starting the service.
+# Get the latest version of docker-compose.yml from the repo.
+# Run a shell script inline. If the /mnt/mantle_data/nzcvm_webapp/repo dir doesn’t exist, clone; otherwise, pull
+ExecStartPre=/usr/bin/bash -c '\
+  if [ ! -d /mnt/mantle_data/nzcvm_webapp/repo ]; then \
+    git clone --branch dev --single-branch https://github.com/ucgmsim/nzcvm_webapp.git /mnt/mantle_data/nzcvm_webapp/repo; \
+  else \
+    cd /mnt/mantle_data/nzcvm_webapp/repo && git fetch --all && git reset --hard origin/dev; \
+  fi'
+
+# Use instructions in docker-compose.yml to pull the latest Docker container images 
+ExecStartPre=docker compose -f /mnt/mantle_data/nzcvm_webapp/repo/docker-compose.yml pull
+
+# Use instructions in docker-compose.yml to start the containers
+ExecStart=docker compose -f /mnt/mantle_data/nzcvm_webapp/repo/docker-compose.yml up -d
+
+# Stops the Docker containers gracefully when the service is stopped.
+ExecStop=docker compose -f /mnt/mantle_data/nzcvm_webapp/repo/docker-compose.yml down
+
+# Starts the [Install] section, which defines how the service integrates with the system boot process.
+[Install]
+
+# Specifies that the service should be started when the default system target (usually multi-user mode) is reached.
+WantedBy=default.target

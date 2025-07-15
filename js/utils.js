@@ -1,0 +1,143 @@
+// Utility functions for handling geographic coordinates and grid calculations
+
+// Function to convert kilometers to degrees latitude/longitude
+function kmToDegrees(km, centerLat) {
+    // Earth's radius in km at the equator
+    const earthRadius = 6371;
+
+    const latDegrees = km / 111.32;
+
+    const latRadians = centerLat * (Math.PI / 180);
+    const lonDegrees = km / (111.32 * Math.cos(latRadians));
+
+    return { lat: latDegrees, lon: lonDegrees };
+}
+
+// Function to convert degrees to kilometers
+function degreesToKm(lat, lon, centerLat) {
+    const latKm = lat * 111.32; // 1 degree latitude is approximately 111.32 km
+
+    const latRadians = centerLat * (Math.PI / 180);
+    const lonKm = lon * (111.32 * Math.cos(latRadians));
+
+    return { latKm, lonKm };
+}
+
+// Function to calculate rectangle bounds from origin and extents
+function calculateBoundsFromOriginAndExtents(originLat, originLon, extentX, extentY) {
+    // Convert extents from kilometers to degrees
+    const extentsDegrees = kmToDegrees(extentX / 2, originLat);
+    const extentsDegreesY = kmToDegrees(extentY / 2, originLat);
+
+    // Calculate southwest and northeast corners
+    const swLat = originLat - extentsDegreesY.lat;
+    const swLon = originLon - extentsDegrees.lon;
+    const neLat = originLat + extentsDegreesY.lat;
+    const neLon = originLon + extentsDegrees.lon;
+
+    return [
+        [swLat, swLon], // Southwest corner
+        [neLat, neLon]  // Northeast corner
+    ];
+}
+
+
+/**
+ * Calculate the angle in degrees between two vectors formed by three points.
+ * The vectors are (p1 - center) and (p2 - center).
+ * The angle is measured from the vector (center to p1) to the vector (center to p2).
+ *
+ * @param {{lat: number, lon: number}} center - The common point (vertex) of the two vectors.
+ * @param {{lat: number, lon: number}} p1 - The end point of the first vector.
+ * @param {{lat: number, lon: number}} p2 - The end point of the second vector.
+ * @returns {number} The angle in degrees. Positive values indicate a clockwise
+ *                   angle from vector (center-p1) to vector (center-p2).
+ */
+// Calculate angle between three points (used for rotation)
+function calculateAngle(center, p1, p2) {
+    const angle1 = Math.atan2(p1.lat - center.lat, p1.lon - center.lon);
+    const angle2 = Math.atan2(p2.lat - center.lat, p2.lon - center.lon);
+    return -((angle2 - angle1) * 180 / Math.PI); // Negated for clockwise convention
+}
+
+
+/**
+ * Calculate the dimensions and total number of points in a 3D velocity model grid.
+ *
+ * @param {number} extentX - X extent of the model in km.
+ * @param {number} extentY - Y extent of the model in km.
+ * @param {number} extentLatlonSpacingKm - Horizontal grid spacing in km.
+ * @param {number} extentZmax - Maximum depth in km.
+ * @param {number} extentZmin - Minimum depth in km.
+ * @param {number} extentZSpacing - Vertical grid spacing in km.
+ * @param {number} originLat - Origin latitude for degree conversion.
+ * @returns {{nx: number, ny: number, nz: number, totalGridPoints: number}} An object containing nx, ny, nz, and total_grid_points.
+ */
+function calculateGridPoints(extentX, extentY, extentLatlonSpacingKm, extentZmax, extentZmin, extentZSpacing, originLat) {
+    // Validate inputs - return null or default values if invalid
+    if (isNaN(extentX) || isNaN(extentY) || isNaN(extentLatlonSpacingKm) || isNaN(extentZmax) || isNaN(extentZmin) || isNaN(extentZSpacing) || isNaN(originLat) || extentLatlonSpacingKm <= 0 || extentZSpacing <= 0) {
+        return { nx: NaN, ny: NaN, nz: NaN, totalGridPoints: NaN };
+    }
+
+    // Convert spacing from km to degrees
+    const spacingDegrees = kmToDegrees(extentLatlonSpacingKm, originLat);
+    // Convert extents from km to degrees
+    const extentXDegrees = kmToDegrees(extentX, originLat).lon;
+    const extentYDegrees = kmToDegrees(extentY, originLat).lat;
+
+    // Calculate grid dimensions
+    // Round floats ending in .5 up to the next highest integer for consistency with 
+    // the original velocity model in code in C.
+    const nx = Math.floor((extentXDegrees / spacingDegrees.lon) + 0.5);
+    const ny = Math.floor((extentYDegrees / spacingDegrees.lat) + 0.5);
+    // Ensure nz is at least 1 if zmax equals zmin
+    const nz = Math.max(1, Math.floor(((extentZmax - extentZmin) / extentZSpacing) + 0.5));
+
+    // Calculate total number of grid points
+    const totalGridPoints = nx * ny * nz;
+
+    return {
+        nx: nx,
+        ny: ny,
+        nz: nz,
+        totalGridPoints: totalGridPoints
+    };
+}
+
+
+/**
+ * Calculate the estimated run time based on the total number of grid points.
+ * The parameters in this approximation formula were derived by fitting a linear
+ * model to the run times as a function of the total number of grid points 
+ * for several test runs on Mantle through the web interface.
+ *
+ * @param {number} totalGridPoints - The total number of grid points (nx * ny * nz).
+ * @returns {number} The estimated run time in seconds. Returns NaN if input is invalid.
+ */
+function calculateApproxRunTime(totalGridPoints) {
+    if (isNaN(totalGridPoints) || totalGridPoints <= 0) {
+        return NaN; // Return NaN for invalid input
+    }
+    // The parameters in this approximation formula were derived by fitting a linear
+    // model to the run times as a function of the total number of grid points 
+    // for several test runs on Mantle through the web interface.
+    return 10 + totalGridPoints * 6.1e-5;
+}
+
+// Helper function to rotate a point around a center point
+function rotatePoint(point, centerPt, angleRad) {
+    const x = point.x - centerPt.x;
+    const y = point.y - centerPt.y;
+    const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
+    const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
+    return L.point(centerPt.x + rotatedX, centerPt.y + rotatedY);
+}
+
+// Helper function to unrotate a point around a center point (inverse of rotatePoint)
+function unrotatePoint(point, centerPt, angleRad) {
+    const x = point.x - centerPt.x;
+    const y = point.y - centerPt.y;
+    const unrotatedX = x * Math.cos(-angleRad) - y * Math.sin(-angleRad);
+    const unrotatedY = x * Math.sin(-angleRad) + y * Math.cos(-angleRad);
+    return L.point(centerPt.x + unrotatedX, centerPt.y + unrotatedY);
+}

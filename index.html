@@ -1,52 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NZCVM2 config map</title>
+    <title>NZCVM web app</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.2/papaparse.min.js"></script>
     <link rel="stylesheet" href="css/styles.css" />
 </head>
+
 <body>
+    <!-- Method to import leaflet-auto-graticule from https://www.npmjs.com/package/leaflet-auto-graticule -->
+    <script type="importmap">
+        {
+            "imports": {
+                "leaflet": "https://esm.sh/leaflet",
+                "leaflet-auto-graticule": "https://esm.sh/leaflet-auto-graticule"
+            }
+        }
+    </script>
+
     <div id="map-container">
         <div id="map"></div>
         <div class="use-instructions">
             <p>Guide</p>
             <ul>
                 <li><strong>Move:</strong> Click and drag the rectangle.</li>
-                <li><strong>Resize:</strong> Click and drag the blue handle in the corner.</li>
-                <li><strong>Rotate:</strong> Click and drag the orange rotation handle.</li>
+                <li><strong>Resize:</strong> Click and drag the square handles on the sides.</li>
+                <li><strong>Rotate:</strong> Click and drag the circular rotation handle.</li>
             </ul>
         </div>
     </div>
-    
+
     <div id="form-container">
         <h2>Model Parameters</h2>
         <form id="rectangle-form">
             <div class="form-group">
                 <label for="origin-lat">Origin Latitude:</label>
-                <input type="number" id="origin-lat" step="0.000001">
+                <input type="number" id="origin-lat" step="0.1">
             </div>
             <div class="form-group">
-                <label for="origin-lng">Origin Longitude:</label>
-                <input type="number" id="origin-lng" step="0.000001">
+                <label for="origin-lon">Origin Longitude:</label>
+                <input type="number" id="origin-lon" step="0.1">
             </div>
             <div class="form-group">
                 <label for="extent-x">Extent X (km):</label>
-                <input type="number" id="extent-x" step="0.001">
+                <input type="number" id="extent-x" step="5.0" value="300">
             </div>
             <div class="form-group">
                 <label for="extent-y">Extent Y (km):</label>
-                <input type="number" id="extent-y" step="0.001">
+                <input type="number" id="extent-y" step="5.0" value="300">
             </div>
             <div class="form-group">
-                <label for="rotation">Rotation (degrees):</label>
-                <input type="number" id="rotation" step="0.1">
-            </div>           
-
-            <div class="form-group">
-                <label for="latlon-spacing">Lat/Lon Spacing (km):</label>
-                <input type="number" id="latlon-spacing" step="0.1" value="0.9">
+                <label for="xy-spacing">X-Y Spacing (km):</label>
+                <input type="number" id="xy-spacing" step="0.1" value="0.4">
             </div>
             <div class="form-group">
                 <label for="extent-zmax">Extent Z Max (km):</label>
@@ -58,8 +66,14 @@
             </div>
             <div class="form-group">
                 <label for="z-spacing">Z Spacing (km):</label>
-                <input type="number" id="z-spacing" step="0.1" value="0.2">
+                <input type="number" id="z-spacing" step="5.0" value="0.4">
             </div>
+
+            <div class="form-group">
+                <label for="rotation">Rotation (degrees):</label>
+                <input type="number" id="rotation" step="5.0">
+            </div>
+
             <div class="form-group">
                 <label for="min-vs">Min Vs (m/s):</label>
                 <input type="number" id="min-vs" step="0.1" value="0.5">
@@ -67,34 +81,55 @@
             <div class="form-group">
                 <label for="model-version">Model Version:</label>
                 <select id="model-version">
-                    <option value="2.03">2.03</option>
-                    <option value="2.07">2.07</option>
+                    <!-- Options will be populated dynamically from backend -->
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label for="topo-type">Topo Type:</label>
                 <select id="topo-type">
-                    <option value="BULLDOZED">BULLDOZED</option>
-                    <option value="SQUASHED">SQUASHED</option>
                     <option value="SQUASHED_TAPERED">SQUASHED_TAPERED</option>
+                    <option value="SQUASHED">SQUASHED</option>
+                    <option value="BULLDOZED">BULLDOZED</option>
                     <option value="TRUE">TRUE</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label for="output-dir">Output Directory:</label>
                 <input type="text" id="output-dir" value="/tmp">
             </div>
-            
-            <button type="button" class="apply-btn" id="apply-btn">Apply Changes</button>
+
+            <div id="grid-calculations" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ccc;">
+                <h4>Number of points in grid:</h4>
+                <div id="grid-nx-display">X dimension: <span>---</span></div>
+                <div id="grid-ny-display">Y dimension: <span>---</span></div>
+                <div id="grid-nz-display">Z dimension: <span>---</span></div>
+                <div id="grid-total-display" style="margin-top: 5px; font-weight: bold;">Total: <span>---</span>
+                </div>
+                <div id="grid-modelsize-display" style="margin-top: 5px; font-weight: bold;">Model size:
+                    <span>---</span>
+                </div>
+                <div id="grid-runtime-display" style="margin-top: 5px; font-weight: bold;">Approx. run time (min):
+                    <span>---</span>
+                </div>
+            </div>
+
         </form>
-        
+
+        <button class="copy-btn" id="copyBtn">Copy configuration to clipboard</button>
         <button class="download-btn" id="downloadBtn">Download configuration file</button>
+        <button class="generate-btn" id="generateBtn">Generate model & download files</button>
+        <div id="status-message" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Load custom JavaScript -->
-    <script src="js/nzcvm2_config_map.js"></script>
+    <script src="js/utils.js" defer></script>
+    <script type="module" src="js/mapSetup.js"></script>
+    <script src="js/rectangleControls.js" defer></script>
+    <script src="js/formHandler.js" defer></script>
+    <script src="js/geojsonHandler.js" defer></script>
+    <script src="js/locationUpload.js" defer></script>
+    <script src="js/apiClient.js" defer></script>
 </body>
+
 </html>

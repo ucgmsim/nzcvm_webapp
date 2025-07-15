@@ -1,0 +1,55 @@
+services:
+  nzcvm_webapp_backend:
+    build:
+      context: . # Build context is the root directory
+      dockerfile: nzcvm_webapp/nzcvm_webapp_backend/Dockerfile # Path to the backend Dockerfile
+    image: earthquakesuc/nzcvm_webapp_backend # Image name for build/push
+    container_name: nzcvm_webapp_backend # Simplified container name
+    # No ports exposed directly to host; Nginx will proxy over the internal Docker network.
+    # Mount the large NZCVM data directory on the host machine to the required
+    # location in the container. This allows the backend to access the data
+    # without needing to copy it into the container image.
+    volumes:
+      - /mnt/mantle_data/nzcvm_webapp/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
+    # For local development, uncomment the line below to mount the local
+    # - /home/arr65/src/velocity_modelling/velocity_modelling/data:/usr/local/lib/python3.12/site-packages/velocity_modelling/data
+    # For local Python code development, uncomment the line below:
+    #- ./nzcvm_webapp/nzcvm_webapp_backend:/app
+    # Automatically restart the container if it stops.
+    restart: always
+    # Connect this service to the custom bridge network defined below.
+    # This allows other containers on the same network (like the frontend)
+    # to reach this service using its name ('nzcvm_webapp_backend') as a hostname.
+    networks:
+      - nzcvm_network
+
+  nzcvm_webapp_frontend:
+    build:
+      context: . # Build context is the root directory
+      dockerfile: nzcvm_webapp/nzcvm_webapp_frontend/Dockerfile # Path to the frontend Dockerfile
+    image: earthquakesuc/nzcvm_webapp_frontend # Image name for build/push
+    container_name: nzcvm_webapp_frontend # Simplified container name
+    ports:
+      - "8888:80" # Map host port 8888 to container port 80 (Nginx)
+    depends_on:
+      - nzcvm_webapp_backend
+    # For local Javascript code development, uncomment the line below:
+    #volumes:
+    #  - ./js:/usr/share/nginx/html/js
+    #  - ./css:/usr/share/nginx/html/css # Optional: if you also want to mount CSS
+    #  - ./index.html:/usr/share/nginx/html/index.html # Optional: if you also want to mount index.html
+    # Automatically restart the container if it stops.
+    restart: always
+
+    # Connect this service to the custom bridge network.
+    # This allows Nginx in this container to proxy requests to the backend
+    # using 'http://nzcvm_webapp_backend:5000'.
+    networks:
+      - nzcvm_network
+
+# Define a custom bridge network for the services.
+# Containers attached to the same custom bridge network can communicate
+# with each other using their service names as DNS hostnames.
+networks:
+  nzcvm_network:
+    driver: bridge
