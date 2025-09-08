@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 # Import for direct call
-from velocity_modelling.scripts.nzcvm import generate_velocity_model
+from velocity_modelling.scripts.generate_3d_model import generate_3d_model
 
 # Get logger
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> None:
         Re-raises exceptions from `generate_velocity_model` after logging them.
     """
     try:
-        generate_velocity_model(
+        generate_3d_model(
             nzcvm_cfg_path=config_path,
             out_dir=output_dir,
             output_format="HDF5",

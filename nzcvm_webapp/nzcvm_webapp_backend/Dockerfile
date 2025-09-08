@@ -8,16 +8,13 @@ WORKDIR /app
 # The source path is relative to the build context defined in docker-compose.yml
 COPY requirements.txt nzcvm_webapp/nzcvm_webapp_backend/generate_model_outlines.py /app/
 
-RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev
+RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev bash nano
 # Explicitly set the path to the llvm-config executable for the llvmlite build process.
 # The llvmlite installation script searches for an executable named 'llvm-config' by default.
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
 # Setting this environment variable tells the build script the correct path, preventing a "not found" error.
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
 RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling#egg=velocity_modelling
-
-# Generate outlines for all model versions as geojson.gz.
-RUN python generate_model_outlines.py generate --path /usr/local/lib/python3.12/site-packages/velocity_modelling/
 
 # Copy the entire nzcvm_webapp package source code
 COPY . /tmp/nzcvm_webapp_src/
