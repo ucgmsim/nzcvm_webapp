@@ -31,7 +31,15 @@ ExecStartPre=/usr/bin/bash -c '\
   if [ ! -d /mnt/mantle_data/nzcvm_webapp/repo ]; then \
     git clone --branch dev --single-branch https://github.com/ucgmsim/nzcvm_webapp.git /mnt/mantle_data/nzcvm_webapp/repo; \
   else \
-    cd /mnt/mantle_data/nzcvm_webapp/repo && git fetch --all && git reset --hard origin/dev; \
+    cd /mnt/mantle_data/nzcvm_webapp/repo && git fetch && git pull; \
+  fi'
+
+# Get the latest version of the nzcvm_data repo
+ExecStartPre=/usr/bin/bash -c '\
+  if [ ! -d /mnt/mantle_data/nzcvm_webapp/nzcvm_data ]; then \
+    git clone --branch main --single-branch https://github.com/ucgmsim/nzcvm_data.git /mnt/mantle_data/nzcvm_webapp/nzcvm_data; \
+  else \
+    cd /mnt/mantle_data/nzcvm_webapp/nzcvm_data && git fetch && git lfs pull;\
   fi'
 
 # Use instructions in docker-compose.yml to pull the latest Docker container images 
