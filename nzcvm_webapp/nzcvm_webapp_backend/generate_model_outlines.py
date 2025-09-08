@@ -4,7 +4,7 @@ Script to generate compressed GeoJSON basin outlines for model versions.
 
 This script:
 1. Reads YAML model version files to get lists of basins for each model version
-2. Finds corresponding GeoJSON basin outline files in data/regional directory
+2. Finds corresponding GeoJSON basin outline files in nzcvm_data/regional directory
 3. Combines all GeoJSON files for each model version
 4. Compresses the final combined GeoJSON file
 
@@ -31,7 +31,7 @@ Additional Commands:
         Show version information
 
     --path / -p: Specify the path to the velocity_modelling directory containing
-                 data/, model_versions/, and generated_basin_geojsons/ folders.
+                 nzcvm_data/, model_versions/, and generated_basin_geojsons/ folders.
                  If not specified, defaults to the parent directory of the script.
 """
 
@@ -294,7 +294,7 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
             print(f"Error: Provided path does not exist: {velocity_modelling_dir}")
             raise typer.Exit(1)
 
-        expected_dirs = ["model_versions", "data", "generated_basin_geojsons"]
+        expected_dirs = ["model_versions", "nzcvm_data", "generated_basin_geojsons"]
         missing_dirs = []
         for expected_dir in expected_dirs:
             if not (velocity_modelling_dir / expected_dir).exists():
@@ -306,9 +306,9 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
             )
             for missing_dir in missing_dirs:
                 print(f"  - {missing_dir}")
-            if "model_versions" in missing_dirs or "data" in missing_dirs:
+            if "model_versions" in missing_dirs or "nzcvm_data" in missing_dirs:
                 print(
-                    "Error: Required directories 'model_versions' and/or 'data' are missing."
+                    "Error: Required directories 'model_versions' and/or 'nzcvm_data' are missing."
                 )
                 raise typer.Exit(1)
     else:
@@ -316,7 +316,7 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
         velocity_modelling_dir = script_path.parent.parent
 
     model_versions_dir = velocity_modelling_dir / "model_versions"
-    regional_dir = velocity_modelling_dir / "data" / "regional"
+    regional_dir = velocity_modelling_dir / "nzcvm_data" / "regional"
 
     # Create output directory for generated files
     output_dir = velocity_modelling_dir / "generated_basin_geojsons"
@@ -328,11 +328,11 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
         raise typer.Exit(1)
 
     if not regional_dir.exists():
-        print(f"Error: Regional data directory not found: {regional_dir}")
+        print(f"Error: Regional nzcvm_data directory not found: {regional_dir}")
         raise typer.Exit(1)
 
     print(f"Looking for YAML model version files in: {model_versions_dir}")
-    print(f"Looking for basin data files in: {regional_dir}")
+    print(f"Looking for basin nzcvm_data files in: {regional_dir}")
 
     # Find all model version YAML files
     model_files = find_model_version_files(str(model_versions_dir))
