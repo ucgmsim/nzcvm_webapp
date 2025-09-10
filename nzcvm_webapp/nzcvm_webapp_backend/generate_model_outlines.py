@@ -20,6 +20,10 @@ Main Usage - Generate All Model Outline Files:
     combine all files for each model version, and create compressed .geojson.gz files
     in ../generated_basin_geojsons/
 
+Note: The path to the nzcvm_data directory does not need to be specified as it is taken from
+the NZCVM_DATA_ROOT environment variable. The --path option specifies the path to the
+velocity_modelling directory containing model_versions/ and generated_basin_geojsons/
+
 Additional Commands:
     python generate_model_outlines.py compare file1.geojson file2.geojson
         Compare two GeoJSON files for differences, duplicates, and feature order
@@ -37,6 +41,7 @@ Additional Commands:
 
 import gzip
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -286,6 +291,14 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
     typer.Exit
         If required directories are missing or if processing fails.
     """
+
+    nzcvm_data_root = os.environ.get("NZCVM_DATA_ROOT")
+
+    if not nzcvm_data_root:
+        print("Error: NZCVM_DATA_ROOT environment variable is not set.")
+        raise typer.Exit(1)
+    regional_dir = Path(nzcvm_data_root) / "regional"
+
     # Get the directories
     if velocity_modelling_path:
         velocity_modelling_dir = Path(velocity_modelling_path).resolve()
@@ -294,29 +307,11 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
             print(f"Error: Provided path does not exist: {velocity_modelling_dir}")
             raise typer.Exit(1)
 
-        expected_dirs = ["model_versions", "nzcvm_data", "generated_basin_geojsons"]
-        missing_dirs = []
-        for expected_dir in expected_dirs:
-            if not (velocity_modelling_dir / expected_dir).exists():
-                missing_dirs.append(expected_dir)
-
-        if missing_dirs:
-            print(
-                f"Warning: The following expected directories are missing in {velocity_modelling_dir}:"
-            )
-            for missing_dir in missing_dirs:
-                print(f"  - {missing_dir}")
-            if "model_versions" in missing_dirs or "nzcvm_data" in missing_dirs:
-                print(
-                    "Error: Required directories 'model_versions' and/or 'nzcvm_data' are missing."
-                )
-                raise typer.Exit(1)
     else:
         script_path = Path(__file__).resolve()
         velocity_modelling_dir = script_path.parent.parent
 
     model_versions_dir = velocity_modelling_dir / "model_versions"
-    regional_dir = velocity_modelling_dir / "nzcvm_data" / "regional"
 
     # Create output directory for generated files
     output_dir = velocity_modelling_dir / "generated_basin_geojsons"

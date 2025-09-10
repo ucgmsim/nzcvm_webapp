@@ -63,14 +63,14 @@ the message, and our organization's Docker Hub username and password to log in. 
 ### Web application set up
 
 * Create directories for the repo and NZCVM's required data resources
-    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/repo`
-    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/nzcvm_data/`
+    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/src/nzcvm_webapp`
+    * `sudo mkdir /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data/`
 
 * Give the `nzcvm_webapp` user all permissions for these directories
     * `sudo chown -R nzcvm_webapp:nzcvm_webapp /mnt/mantle_data/nzcvm_webapp`
     * `sudo chmod -R u+rwx /mnt/mantle_data/nzcvm_webapp`
 
-* Copy the data resources required for the NZCVM code to `/mnt/mantle_data/nzcvm_webapp/nzcvm_data/`
+* Copy the data resources required for the NZCVM code to `/mnt/mantle_data/nzcvm_webapp/src/nzcvm_data/`
     * e.g., use rsync or sftp
 
 Get the `nzcvm_webapp` user's User ID (UID)

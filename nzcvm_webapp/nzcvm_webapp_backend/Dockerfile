@@ -14,7 +14,12 @@ RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev bash nano
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
 # Setting this environment variable tells the build script the correct path, preventing a "not found" error.
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
-RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling#egg=velocity_modelling
+
+# Set the NZCVM_DATA_ROOT environment variable. The nzcvm_data directory on Mantle
+# will be mounted here inside the container.
+ENV NZCVM_DATA_ROOT=/app/nzcvm_data
+
+RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling.git@refs/heads/nzcvm_data_root_config#egg=velocity_modelling
 
 # Copy the entire nzcvm_webapp package source code
 COPY . /tmp/nzcvm_webapp_src/
