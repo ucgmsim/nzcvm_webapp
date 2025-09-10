@@ -10,7 +10,8 @@ services:
     # location in the container. This allows the backend to access the data
     # without needing to copy it into the container image.
     volumes:
-      - /mnt/mantle_data/nzcvm_webapp/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/nzcvm_data
+    - /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data:/app/nzcvm_data
+    # OLD mount location  - /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/nzcvm_data
     # For local development, uncomment the line below to mount the local
     # - /home/arr65/data/nzcvm_data:/usr/local/lib/python3.12/site-packages/velocity_modelling/nzcvm_data
     # For local Python code development, uncomment the line below:
