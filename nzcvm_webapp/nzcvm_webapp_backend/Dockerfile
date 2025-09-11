@@ -8,7 +8,7 @@ WORKDIR /app
 # The source path is relative to the build context defined in docker-compose.yml
 COPY requirements.txt nzcvm_webapp/nzcvm_webapp_backend/generate_model_outlines.py /app/
 
-RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev bash nano
+RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev
 # Explicitly set the path to the llvm-config executable for the llvmlite build process.
 # The llvmlite installation script searches for an executable named 'llvm-config' by default.
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
@@ -16,7 +16,7 @@ RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev bash nano
 ENV LLVM_CONFIG=/usr/bin/llvm-config-15
 
 # Set the NZCVM_DATA_ROOT environment variable. The nzcvm_data directory on Mantle
-# will be mounted here inside the container.
+# will be mounted at this location inside the container.
 ENV NZCVM_DATA_ROOT=/app/nzcvm_data
 
 RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling.git@refs/heads/nzcvm_data_root_config#egg=velocity_modelling
