@@ -67,7 +67,7 @@ function addLegend() {
 }
 
 // Function to load and display GeoJSON based on filename
-function loadGeoJSONByModelVersion(filename) {
+async function loadGeoJSONByModelVersion(filename) {
     // Clear existing GeoJSON layer if any
     if (currentGeoJSONLayer) {
         map.removeLayer(currentGeoJSONLayer);
@@ -92,23 +92,42 @@ function loadGeoJSONByModelVersion(filename) {
 
     console.log('Loading GeoJSON:', filename);
 
-    // Create AbortController for timeout handling (60 seconds for GeoJSON data)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    // Retry logic for robustness
+    const maxRetries = 3;
+    let retryCount = 0;
 
-    // Fetch from backend
-    fetch(`geojson/${filename}`, { // Relative path since we're served from /nzcvm_webapp/
-        signal: controller.signal
-    })
-        .then(response => {
+    async function attemptFetch() {
+        try {
+            // Create AbortController for timeout handling (60 seconds for GeoJSON data)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            // Fetch from backend
+            const response = await fetch(`geojson/${filename}`, {
+                signal: controller.signal,
+                cache: 'default', // Allow browser caching
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
             clearTimeout(timeoutId);
+
+            console.log(`Response status: ${response.status} ${response.statusText}`);
+            console.log(`Response headers:`, {
+                'content-type': response.headers.get('content-type'),
+                'content-encoding': response.headers.get('content-encoding'),
+                'content-length': response.headers.get('content-length'),
+                'cache-control': response.headers.get('cache-control')
+            });
+
             if (!response.ok) {
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
             }
-            return response.json(); // Backend response is already decompressed JSON
-        })
-        .then(data => {
-            // Use performance optimized approach for GeoJSON rendering
+
+            console.log('Attempting to parse JSON...');
+            const data = await response.json();
+            console.log(`Successfully parsed JSON with ${Object.keys(data).length} top-level keys`);            // Use performance optimized approach for GeoJSON rendering
             currentGeoJSONLayer = L.geoJSON(data, {
                 style: function () {
                     return {
@@ -136,23 +155,44 @@ function loadGeoJSONByModelVersion(filename) {
             if (rectangle) {
                 rectangle.bringToFront();
             }
-        })
-        .catch(error => {
-            const errorMsg = error.message || 'Unknown error';
-            console.error('Error loading GeoJSON:', error);
 
-            // Remove loading indicator if it exists
+            console.log(`Successfully loaded GeoJSON: ${filename}`);
+
+        } catch (error) {
+            const errorMsg = error.message || 'Unknown error';
+            console.error(`Error loading GeoJSON (attempt ${retryCount + 1}):`, error);
+            console.error(`Error type: ${error.constructor.name}`);
+            console.error(`Error stack:`, error.stack);
+
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out while loading GeoJSON data');
+            }
+
+            // Retry logic for transient errors
+            if (retryCount < maxRetries - 1 &&
+                (error.message.includes('400') || error.message.includes('500') ||
+                    error.message.includes('CONTENT_LENGTH') || error.message.includes('Failed to fetch'))) {
+                retryCount++;
+                console.log(`Retrying GeoJSON load (${retryCount}/${maxRetries}) in 1 second...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return attemptFetch();
+            }            // Remove loading indicator if it exists
             const loadingIndicator = document.getElementById('loading-indicator');
             if (loadingIndicator) {
                 loadingIndicator.remove();
             }
 
-            if (error.name === 'AbortError') {
-                alert('Request timed out while loading GeoJSON data. Please try again.');
-            } else {
-                alert(`Error loading GeoJSON: ${errorMsg}. Please check console for details.`);
-            }
-        });
+            throw error;
+        }
+    }
+
+    try {
+        await attemptFetch();
+    } catch (error) {
+        const errorMsg = error.message || 'Unknown error';
+        console.error('Final error loading GeoJSON:', error);
+        alert(`Error loading GeoJSON: ${errorMsg}. Please check console for details.`);
+    }
 }
 
 // Add change event listener for model version selection

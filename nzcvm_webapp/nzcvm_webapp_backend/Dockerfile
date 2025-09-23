@@ -8,7 +8,7 @@ WORKDIR /app
 # The source path is relative to the build context defined in docker-compose.yml
 COPY requirements.txt nzcvm_webapp/nzcvm_webapp_backend/generate_model_outlines.py /app/
 
-RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev
+RUN apk add --no-cache git llvm15-dev make g++ hdf5-dev gdal-dev fftw-dev bash nano
 # Explicitly set the path to the llvm-config executable for the llvmlite build process.
 # The llvmlite installation script searches for an executable named 'llvm-config' by default.
 # However, the llvm15-dev package installs it as 'llvm-config-15' (to allow multiple versions).
@@ -19,7 +19,11 @@ ENV LLVM_CONFIG=/usr/bin/llvm-config-15
 # will be mounted at this location inside the container.
 ENV NZCVM_DATA_ROOT=/app/nzcvm_data
 
-RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling.git@refs/heads/nzcvm_data_root_config#egg=velocity_modelling
+# The latest versions of llvmlite and numba have issues building on Alpine Linux so
+# we install specific versions that are known to work from a previous successful build.
+RUN pip install --no-cache-dir llvmlite==0.44.0 numba==0.61.2
+
+RUN  pip install --no-cache-dir git+https://github.com/ucgmsim/velocity_modelling.git#egg=velocity_modelling
 
 # Copy the entire nzcvm_webapp package source code
 COPY . /tmp/nzcvm_webapp_src/
