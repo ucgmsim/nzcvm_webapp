@@ -56,6 +56,209 @@ app = typer.Typer(
 )
 
 
+def simplify_coordinates(
+    coords: list[list[float]], tolerance: float = 0.001
+) -> list[list[float]]:
+    """
+    Simplify coordinates using Douglas-Peucker algorithm.
+
+    Parameters
+    ----------
+    coords : list[list[float]]
+        List of [longitude, latitude] coordinate pairs
+    tolerance : float, default=0.001
+        Simplification tolerance (smaller = more detail, larger = more simplified)
+
+    Returns
+    -------
+    list[list[float]]
+        Simplified coordinate list
+    """
+    if len(coords) <= 2:
+        return coords
+
+    def perpendicular_distance(
+        point: list[float], line_start: list[float], line_end: list[float]
+    ) -> float:
+        """Calculate perpendicular distance from point to line."""
+        x0, y0 = point
+        x1, y1 = line_start
+        x2, y2 = line_end
+
+        # Calculate the distance from point to line
+        A = x2 - x1
+        B = y2 - y1
+        C = x1 * y2 - x2 * y1
+
+        distance = abs(A * y0 - B * x0 + C) / (A * A + B * B) ** 0.5
+        return distance
+
+    def douglas_peucker(
+        coords_segment: list[list[float]], tolerance: float
+    ) -> list[list[float]]:
+        """Recursive Douglas-Peucker implementation."""
+        if len(coords_segment) <= 2:
+            return coords_segment
+
+        # Find the point with maximum distance from the line between first and last points
+        max_distance = 0
+        max_index = 0
+
+        for i in range(1, len(coords_segment) - 1):
+            distance = perpendicular_distance(
+                coords_segment[i], coords_segment[0], coords_segment[-1]
+            )
+            if distance > max_distance:
+                max_distance = distance
+                max_index = i
+
+        # If the maximum distance is greater than tolerance, recursively simplify
+        if max_distance > tolerance:
+            # Recursively simplify the two segments
+            left_segment = douglas_peucker(coords_segment[: max_index + 1], tolerance)
+            right_segment = douglas_peucker(coords_segment[max_index:], tolerance)
+
+            # Combine the results (remove duplicate point at connection)
+            return left_segment[:-1] + right_segment
+        else:
+            # All points between first and last are within tolerance, return just endpoints
+            return [coords_segment[0], coords_segment[-1]]
+
+    return douglas_peucker(coords, tolerance)
+
+
+def reduce_precision(
+    coords: list[list[float]], precision: int = 5
+) -> list[list[float]]:
+    """
+    Reduce coordinate precision by rounding to specified decimal places.
+
+    Parameters
+    ----------
+    coords : list[list[float]]
+        List of [longitude, latitude] coordinate pairs
+    precision : int, default=5
+        Number of decimal places to round to (5 decimal places ≈ 1.1m accuracy)
+
+    Returns
+    -------
+    list[list[float]]
+        Coordinates with reduced precision
+    """
+    return [[round(coord, precision) for coord in point] for point in coords]
+
+
+def simplify_geometry(
+    geometry: dict[str, Any], tolerance: float = 0.001, precision: int = 5
+) -> dict[str, Any]:
+    """
+    Simplify a GeoJSON geometry by reducing coordinates and precision.
+
+    Parameters
+    ----------
+    geometry : dict[str, Any]
+        GeoJSON geometry object
+    tolerance : float, default=0.001
+        Douglas-Peucker simplification tolerance
+    precision : int, default=5
+        Coordinate precision (decimal places)
+
+    Returns
+    -------
+    dict[str, Any]
+        Simplified geometry object
+    """
+    if geometry["type"] == "Polygon":
+        simplified_coords = []
+        for ring in geometry["coordinates"]:
+            # Simplify the ring
+            simplified_ring = simplify_coordinates(ring, tolerance)
+            # Reduce precision
+            simplified_ring = reduce_precision(simplified_ring, precision)
+            # Ensure polygon is closed (first and last points are the same)
+            if simplified_ring[0] != simplified_ring[-1]:
+                simplified_ring.append(simplified_ring[0])
+            simplified_coords.append(simplified_ring)
+
+        return {"type": "Polygon", "coordinates": simplified_coords}
+
+    elif geometry["type"] == "MultiPolygon":
+        simplified_coords = []
+        for polygon in geometry["coordinates"]:
+            simplified_polygon = []
+            for ring in polygon:
+                simplified_ring = simplify_coordinates(ring, tolerance)
+                simplified_ring = reduce_precision(simplified_ring, precision)
+                if simplified_ring[0] != simplified_ring[-1]:
+                    simplified_ring.append(simplified_ring[0])
+                simplified_polygon.append(simplified_ring)
+            simplified_coords.append(simplified_polygon)
+
+        return {"type": "MultiPolygon", "coordinates": simplified_coords}
+
+    elif geometry["type"] == "LineString":
+        simplified_coords = simplify_coordinates(geometry["coordinates"], tolerance)
+        simplified_coords = reduce_precision(simplified_coords, precision)
+
+        return {"type": "LineString", "coordinates": simplified_coords}
+
+    elif geometry["type"] == "MultiLineString":
+        simplified_coords = []
+        for line in geometry["coordinates"]:
+            simplified_line = simplify_coordinates(line, tolerance)
+            simplified_line = reduce_precision(simplified_line, precision)
+            simplified_coords.append(simplified_line)
+
+        return {"type": "MultiLineString", "coordinates": simplified_coords}
+
+    else:
+        # For Point, MultiPoint, or unknown types, just reduce precision
+        if "coordinates" in geometry:
+            if geometry["type"] == "Point":
+                geometry["coordinates"] = reduce_precision(
+                    [geometry["coordinates"]], precision
+                )[0]
+            elif geometry["type"] == "MultiPoint":
+                geometry["coordinates"] = reduce_precision(
+                    geometry["coordinates"], precision
+                )
+
+        return geometry
+
+
+def simplify_geojson_features(
+    features: list[dict[str, Any]], tolerance: float = 0.001, precision: int = 5
+) -> list[dict[str, Any]]:
+    """
+    Simplify all features in a GeoJSON feature list.
+
+    Parameters
+    ----------
+    features : list[dict[str, Any]]
+        List of GeoJSON features
+    tolerance : float, default=0.001
+        Douglas-Peucker simplification tolerance
+    precision : int, default=5
+        Coordinate precision (decimal places)
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        List of simplified GeoJSON features
+    """
+    simplified_features = []
+
+    for feature in features:
+        simplified_feature = feature.copy()
+        if "geometry" in feature and feature["geometry"]:
+            simplified_feature["geometry"] = simplify_geometry(
+                feature["geometry"], tolerance, precision
+            )
+        simplified_features.append(simplified_feature)
+
+    return simplified_features
+
+
 def find_model_version_files(model_versions_dir: str) -> list[str]:
     """
     Find all YAML files in the model_versions directory.
@@ -71,7 +274,7 @@ def find_model_version_files(model_versions_dir: str) -> list[str]:
         Sorted list of absolute paths to YAML files found in the directory.
     """
     model_dir = Path(model_versions_dir)
-    return sorted(list(model_dir.glob("*.yaml")))
+    return sorted([str(f) for f in model_dir.glob("*.yaml")])
 
 
 def read_yaml_model_version(yaml_file: str) -> list[str]:
@@ -160,9 +363,15 @@ def ensure_geojson_exists(file_path: str) -> Optional[str]:
         return None
 
 
-def combine_geojson_files(geojson_files: list[str], output_path: str) -> None:
+def combine_geojson_files(
+    geojson_files: list[str],
+    output_path: str,
+    simplify: bool = True,
+    tolerance: float = 0.001,
+    precision: int = 5,
+) -> None:
     """
-    Combine multiple GeoJSON files into one.
+    Combine multiple GeoJSON files into one with optional simplification.
 
     Parameters
     ----------
@@ -170,15 +379,26 @@ def combine_geojson_files(geojson_files: list[str], output_path: str) -> None:
         list of paths to GeoJSON files to combine.
     output_path : str
         Path where the combined GeoJSON file will be written.
+    simplify : bool, default=True
+        Whether to apply coordinate simplification to reduce file size
+    tolerance : float, default=0.001
+        Douglas-Peucker simplification tolerance (smaller = more detail)
+    precision : int, default=5
+        Coordinate precision in decimal places (5 ≈ 1.1m accuracy)
 
     Raises
     ------
     RuntimeError
         If an error occurs during the combination process.
     """
-    print(f"Combining {len(geojson_files)} GeoJSON files into {output_path}")
+    size_info = "with simplification" if simplify else "without simplification"
+    print(
+        f"Combining {len(geojson_files)} GeoJSON files into {output_path} {size_info}"
+    )
     try:
-        combine_geojson_inline(geojson_files, output_path)
+        combine_geojson_inline(
+            geojson_files, output_path, simplify, tolerance, precision
+        )
     except Exception as e:  # noqa: BLE001 # Re-raise as RuntimeError for consistent error handling
         raise RuntimeError(f"Error combining GeoJSON files: {e}") from e
 
@@ -213,9 +433,16 @@ def compress_geojson(geojson_path: str) -> None:
         raise RuntimeError(f"Error compressing {geojson_path}: {e}") from e
 
 
-def process_model_version(yaml_file: str, regional_dir: str, output_dir: str) -> None:
+def process_model_version(
+    yaml_file: str,
+    regional_dir: str,
+    output_dir: str,
+    simplify: bool = True,
+    tolerance: float = 0.001,
+    precision: int = 5,
+) -> None:
     """
-    Process a single model version YAML file.
+    Process a single model version YAML file with optional simplification.
 
     Parameters
     ----------
@@ -225,6 +452,12 @@ def process_model_version(yaml_file: str, regional_dir: str, output_dir: str) ->
         Path to the regional directory containing basin data.
     output_dir : str
         Path to the output directory for generated files.
+    simplify : bool, default=True
+        Whether to apply coordinate simplification
+    tolerance : float, default=0.001
+        Douglas-Peucker simplification tolerance
+    precision : int, default=5
+        Coordinate precision in decimal places
 
     Raises
     ------
@@ -267,8 +500,10 @@ def process_model_version(yaml_file: str, regional_dir: str, output_dir: str) ->
     # Define output paths in the dedicated output directory
     combined_geojson_path = str(Path(output_dir) / f"{version_name}_basins.geojson")
 
-    # Combine all GeoJSON files
-    combine_geojson_files(valid_geojson_files, combined_geojson_path)
+    # Combine all GeoJSON files with simplification
+    combine_geojson_files(
+        valid_geojson_files, combined_geojson_path, simplify, tolerance, precision
+    )
 
     # Compress the combined GeoJSON
     compress_geojson(combined_geojson_path)
@@ -276,15 +511,26 @@ def process_model_version(yaml_file: str, regional_dir: str, output_dir: str) ->
     print(f"Successfully processed {yaml_file}")
 
 
-def main(velocity_modelling_path: Optional[str] = None) -> None:
+def main(
+    velocity_modelling_path: Optional[str] = None,
+    simplify: bool = True,
+    tolerance: float = 0.001,
+    precision: int = 5,
+) -> None:
     """
-    Main function to process all model version files.
+    Main function to process all model version files with optional simplification.
 
     Parameters
     ----------
     velocity_modelling_path : Optional[str], default=None
         Path to the velocity_modelling directory. If None, uses the parent
         directory of the script.
+    simplify : bool, default=True
+        Whether to apply coordinate simplification to reduce file size
+    tolerance : float, default=0.001
+        Douglas-Peucker simplification tolerance (smaller = more detail)
+    precision : int, default=5
+        Coordinate precision in decimal places (5 ≈ 1.1m accuracy)
 
     Raises
     ------
@@ -344,7 +590,14 @@ def main(velocity_modelling_path: Optional[str] = None) -> None:
     success_count = 0
     for model_file in model_files:
         try:
-            process_model_version(model_file, str(regional_dir), str(output_dir))
+            process_model_version(
+                model_file,
+                str(regional_dir),
+                str(output_dir),
+                simplify,
+                tolerance,
+                precision,
+            )
             success_count += 1
         except Exception as e:  # noqa: BLE001 # Catch all errors to continue processing other files
             print(f"Error processing {model_file}: {e}")
@@ -397,9 +650,15 @@ def read_geojson(file_path: str) -> dict[str, Any]:
         return json.load(file)
 
 
-def combine_geojson_inline(files: list[str], output_path: str) -> bool:
+def combine_geojson_inline(
+    files: list[str],
+    output_path: str,
+    simplify: bool = True,
+    tolerance: float = 0.001,
+    precision: int = 5,
+) -> bool:
     """
-    Combine multiple GeoJSON files into one.
+    Combine multiple GeoJSON files into one with optional simplification.
 
     Parameters
     ----------
@@ -407,6 +666,12 @@ def combine_geojson_inline(files: list[str], output_path: str) -> bool:
         list of paths to GeoJSON files to combine.
     output_path : str
         Path where the combined GeoJSON file will be written.
+    simplify : bool, default=True
+        Whether to apply coordinate simplification
+    tolerance : float, default=0.001
+        Douglas-Peucker simplification tolerance (lower = more detail)
+    precision : int, default=5
+        Coordinate precision in decimal places (5 ≈ 1.1m accuracy)
 
     Returns
     -------
@@ -417,6 +682,7 @@ def combine_geojson_inline(files: list[str], output_path: str) -> bool:
     -----
     Groups files by parent directory and applies consistent styling to all features.
     Adds source file information to each feature's properties.
+    Optionally simplifies geometries to reduce file size.
     """
     combined_features = []
     groups = {}
@@ -428,6 +694,11 @@ def combine_geojson_inline(files: list[str], output_path: str) -> bool:
             groups[parent] = [b]
 
     print(f"Grouping files by directory: {groups}")
+    if simplify:
+        print(
+            f"Applying simplification: tolerance={tolerance}, precision={precision} decimal places"
+        )
+
     # Use a consistent color for all features
     color = {
         "stroke": "#ba0045",
@@ -444,6 +715,17 @@ def combine_geojson_inline(files: list[str], output_path: str) -> bool:
                 feature["properties"].update(color)
                 feature["properties"]["source_file"] = Path(file_path).name
                 combined_features.append(feature)
+
+    # Apply simplification if requested
+    if simplify:
+        print(f"Simplifying {len(combined_features)} features...")
+        original_size = len(str(combined_features))
+        combined_features = simplify_geojson_features(
+            combined_features, tolerance, precision
+        )
+        simplified_size = len(str(combined_features))
+        reduction = (1 - simplified_size / original_size) * 100
+        print(f"Simplification reduced size by {reduction:.1f}%")
 
     combined_geojson = {"type": "FeatureCollection", "features": combined_features}
 
@@ -763,6 +1045,22 @@ def generate_cmd(
     path: Optional[str] = typer.Option(
         None, "--path", "-p", help="Path to the velocity_modelling directory"
     ),
+    simplify: bool = typer.Option(
+        True,
+        "--simplify/--no-simplify",
+        help="Apply coordinate simplification to reduce file size",
+    ),
+    tolerance: float = typer.Option(
+        0.001,
+        "--tolerance",
+        "-t",
+        help="Simplification tolerance (smaller = more detail, larger = smaller files)",
+    ),
+    precision: int = typer.Option(
+        5,
+        "--precision",
+        help="Coordinate precision in decimal places (5 ≈ 1.1m accuracy)",
+    ),
 ):
     """
     Generate all model outline files (default command).
@@ -770,8 +1068,14 @@ def generate_cmd(
     This will process all YAML model version files, find basin outline files,
     convert txt files to GeoJSON if needed, combine all files for each model
     version, and create compressed .geojson.gz files.
+
+    Simplification options can significantly reduce file sizes:
+    - tolerance=0.001 (default): Good balance of size vs quality
+    - tolerance=0.01: More aggressive simplification for smaller files
+    - precision=5 (default): ~1.1m accuracy, good for web display
+    - precision=4: ~11m accuracy, smaller files for overview maps
     """
-    main(path)
+    main(path, simplify, tolerance, precision)
 
 
 @app.command("compare")
@@ -792,19 +1096,35 @@ def main_callback(
     path: Optional[str] = typer.Option(
         None, "--path", "-p", help="Path to the velocity_modelling directory"
     ),
+    simplify: bool = typer.Option(
+        True,
+        "--simplify/--no-simplify",
+        help="Apply coordinate simplification to reduce file size",
+    ),
+    tolerance: float = typer.Option(
+        0.001,
+        "--tolerance",
+        "-t",
+        help="Simplification tolerance (smaller = more detail)",
+    ),
+    precision: int = typer.Option(
+        5, "--precision", help="Coordinate precision in decimal places"
+    ),
 ):
     """
     Generate compressed GeoJSON basin outlines for model versions.
 
     If no command is specified, runs the default 'generate' command.
+
+    Use --simplify to reduce file sizes while maintaining visual quality.
     """
     if version:
-        print("generate_model_outlines.py version 1.0")
+        print("generate_model_outlines.py version 1.1 - with coordinate simplification")
         raise typer.Exit()
 
     if ctx.invoked_subcommand is None:
         # Default behavior - run the generate command
-        main(path)
+        main(path, simplify, tolerance, precision)
 
 
 if __name__ == "__main__":
