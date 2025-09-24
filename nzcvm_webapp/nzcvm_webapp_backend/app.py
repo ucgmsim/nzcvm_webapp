@@ -57,7 +57,7 @@ def list_model_versions() -> Response:
             version_name = yaml_path.stem
 
             # Look for corresponding GeoJSON file
-            geojson_filename = f"{version_name}_basins.geojson.gz"
+            geojson_filename = f"{version_name}_basins.geojson"
             geojson_path = GEOJSON_DIR / geojson_filename
 
             if geojson_path.exists():
@@ -119,20 +119,20 @@ def list_model_versions() -> Response:
 
 @app.route("/geojson/list", methods=["GET"])
 def list_geojson_files() -> Response:
-    """List available compressed GeoJSON files from the regional directory.
+    """List available GeoJSON files from the regional directory.
 
     Returns
     -------
     Response
-        JSON response containing a list of available compressed GeoJSON files.
+        JSON response containing a list of available GeoJSON files.
     """
     try:
         if not GEOJSON_DIR.exists():
             return jsonify({"error": "GeoJSON directory not found"}), 404
 
-        # Find only compressed basin GeoJSON files
+        # Find basin GeoJSON files
         geojson_files = []
-        for file_path in GEOJSON_DIR.glob("*basins.geojson.gz"):
+        for file_path in GEOJSON_DIR.glob("*basins.geojson"):
             geojson_files.append(file_path.name)
 
         return jsonify({"files": sorted(geojson_files, reverse=True)})
@@ -144,17 +144,17 @@ def list_geojson_files() -> Response:
 
 @app.route("/geojson/<filename>", methods=["GET"])
 def serve_geojson_file(filename: str) -> Response | tuple[Response, int]:
-    """Serve a compressed GeoJSON file from the regional directory.
+    """Serve a GeoJSON file from the regional directory.
 
     Parameters
     ----------
     filename : str
-        The name of the compressed GeoJSON file to serve (must be .geojson.gz)
+        The name of the GeoJSON file to serve (must be .geojson)
 
     Returns
     -------
     Response | tuple[Response, int]
-        The decompressed GeoJSON data as JSON, or error response with status code.
+        The GeoJSON data as JSON, or error response with status code.
     """
     try:
         logger.info(f"Serving GeoJSON file: {filename}")
@@ -171,19 +171,13 @@ def serve_geojson_file(filename: str) -> Response | tuple[Response, int]:
             logger.error(f"File not found: {file_path}")
             return jsonify({"error": "File not found"}), 404
 
-        if not filename.endswith(".geojson.gz"):
+        if not filename.endswith(".geojson"):
             logger.warning(f"Invalid file extension: {filename}")
-            return jsonify({"error": "File must be a .geojson.gz file"}), 400
+            return jsonify({"error": "File must be a .geojson file"}), 400
 
-        # Serve the raw gzipped file with proper headers for client-side decompression
+        # Serve the uncompressed GeoJSON file directly
         try:
-            logger.info(f"Serving raw gzipped file: {file_path}")
-
-            # Comprehensive debugging
-            logger.info(f"GEOJSON_DIR exists: {GEOJSON_DIR.exists()}")
-            logger.info(f"GEOJSON_DIR path: {GEOJSON_DIR}")
-            logger.info(f"File path exists: {file_path.exists()}")
-            logger.info(f"File path: {file_path}")
+            logger.info(f"Serving GeoJSON file: {file_path}")
 
             # Check file permissions and properties
             if file_path.exists():
@@ -196,79 +190,27 @@ def serve_geojson_file(filename: str) -> Response | tuple[Response, int]:
                 logger.info(f"Directory contents: {list(GEOJSON_DIR.glob('*'))}")
                 return jsonify({"error": "File not found after existence check"}), 404
 
-            # Test reading first few bytes
-            try:
-                with open(file_path, "rb") as test_file:
-                    first_bytes = test_file.read(10)
-                    logger.info(f"First 10 bytes: {first_bytes}")
-                    if not first_bytes.startswith(b"\x1f\x8b"):
-                        return jsonify({"error": "File is not gzipped"}), 400
-            except Exception as read_test_error:
-                logger.error(f"Cannot read file for testing: {read_test_error}")
-                return jsonify({"error": "Cannot read file"}), 500
-
-            # Robustly decompress with memory management and file locking
-            logger.info("Decompressing gzipped file with memory management...")
-
-            import fcntl
-            import gc
-            import gzip
+            # Read and serve the uncompressed GeoJSON file
             import json
-            import time
 
-            # Add file locking to prevent concurrent access issues
-            try:
-                with open(file_path, "rb") as lock_file:
-                    # Use exclusive lock to prevent concurrent access
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-
-                    # Force garbage collection before large operation
-                    gc.collect()
-
-                    # Decompress with error recovery
-                    try:
-                        with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
-                            geojson_data = json.load(gz_file)
-                    except MemoryError:
-                        logger.error(
-                            f"Memory error decompressing {filename}, forcing GC and retrying..."
-                        )
-                        gc.collect()
-                        time.sleep(0.1)  # Brief pause
-                        with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
-                            geojson_data = json.load(gz_file)
-
-                    # Release file lock
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-
-            except (BlockingIOError, OSError):
-                logger.warning(
-                    f"File lock conflict for {filename}, retrying in 100ms..."
-                )
-                time.sleep(0.1)
-                # Retry without lock
-                with gzip.open(file_path, "rt", encoding="utf-8") as gz_file:
-                    geojson_data = json.load(gz_file)
+            with open(file_path, "r", encoding="utf-8") as geojson_file:
+                geojson_data = json.load(geojson_file)
 
             logger.info(
-                f"Successfully decompressed JSON with {len(geojson_data)} top-level keys"
+                f"Successfully loaded JSON with {len(geojson_data)} top-level keys"
             )
 
-            # Create response with explicit memory management
+            # Create response
             response = jsonify(geojson_data)
             response.headers["Content-Type"] = "application/json"
             response.headers["Cache-Control"] = "public, max-age=3600"
-            response.headers["X-Content-Source"] = "decompressed"  # Debug header
+            response.headers["X-Content-Source"] = "uncompressed"  # Debug header
 
-            # Clear local reference to help GC
-            del geojson_data
-            gc.collect()
-
-            logger.info(f"Successfully serving decompressed JSON for {filename}")
+            logger.info(f"Successfully serving JSON for {filename}")
             return response
 
-        except (gzip.BadGzipFile, json.JSONDecodeError, UnicodeDecodeError) as e:
-            logger.error(f"Error decompressing/parsing file {filename}: {e}")
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logger.error(f"Error parsing file {filename}: {e}")
             return jsonify({"error": f"Invalid GeoJSON file format: {str(e)}"}), 400
 
         except PermissionError as e:

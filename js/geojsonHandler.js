@@ -78,8 +78,8 @@ async function loadGeoJSONByModelVersion(filename) {
         }
     }
 
-    if (!filename || !filename.endsWith('.geojson.gz')) {
-        console.warn('Invalid or missing compressed GeoJSON filename:', filename);
+    if (!filename || !filename.endsWith('.geojson')) {
+        console.warn('Invalid or missing GeoJSON filename:', filename);
         return;
     }
 

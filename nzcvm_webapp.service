@@ -1,4 +1,12 @@
-# Starts the [Unit] section, which contains metadata and defines relationships with other services.
+# Starts the [Unit] sectio# ExecStartPre commands are run before starting the service.
+# Get the latest version of docker-compose.yml from the repo.
+# Run a shell script inline. If the /mnt/mantle_data/nzcvm_webapp/src/nzcvm_webapp dir doesn't exist, clone; otherwise, pull
+ExecStartPre=/usr/bin/bash -c '\
+  if [ ! -d /mnt/mantle_data/nzcvm_webapp/src/nzcvm_webapp ]; then \
+    git clone --branch main --single-branch https://github.com/ucgmsim/nzcvm_webapp.git /mnt/mantle_data/nzcvm_webapp/src/nzcvm_webapp; \
+  else \
+    cd /mnt/mantle_data/nzcvm_webapp/src/nzcvm_webapp && git fetch && git pull; \
+  fi'contains metadata and defines relationships with other services.
 [Unit]
 
 # Provides a short description of the service

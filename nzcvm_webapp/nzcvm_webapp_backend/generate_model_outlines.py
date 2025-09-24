@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 """
-Script to generate compressed GeoJSON basin outlines for model versions.
+Script to generate GeoJSON basin outlines for model versions with optional simplification.
 
 This script:
 1. Reads YAML model version files to get lists of basins for each model version
 2. Finds corresponding GeoJSON basin outline files in nzcvm_data/regional directory
 3. Combines all GeoJSON files for each model version
-4. Compresses the final combined GeoJSON file
+4. Optionally simplifies geometries to reduce file size while preserving shape quality
+5. Outputs combined GeoJSON files to generated_basin_geojsons/
+
+Geometry Simplification:
+The script includes advanced coordinate simplification using the Douglas-Peucker algorithm
+and precision reduction to significantly reduce file sizes while maintaining visual quality:
+
+- Douglas-Peucker simplification removes unnecessary coordinate points while preserving
+  the essential shape characteristics of polygons and lines
+- Coordinate precision reduction rounds coordinates to specified decimal places
+- Default settings (tolerance=0.001, precision=5) provide ~1.1m accuracy
+- Aggressive settings (tolerance=0.01, precision=3) can reduce file sizes by 70-90%
+- Use --no-simplify to disable all simplification for maximum accuracy
 
 Usage Examples:
 
@@ -17,8 +29,18 @@ Main Usage - Generate All Model Outline Files:
     python generate_model_outlines.py generate --path /path/to/velocity_modelling
 
     This will process all YAML model version files, find GeoJSON basin outline files,
-    combine all files for each model version, and create compressed .geojson.gz files
+    combine all files for each model version, and create .geojson files
     in ../generated_basin_geojsons/
+
+Simplification Options:
+    python generate_model_outlines.py --tolerance 0.01 --precision 3
+        Very aggressive simplification for smallest files (~111m accuracy)
+
+    python generate_model_outlines.py --no-simplify
+        Disable simplification for maximum accuracy (larger files)
+
+    python generate_model_outlines.py --tolerance 0.005 --precision 4
+        Moderate simplification (~11m accuracy)
 
 Note: The path to the nzcvm_data directory does not need to be specified as it is taken from
 the NZCVM_DATA_ROOT environment variable. The --path option specifies the path to the
@@ -77,6 +99,16 @@ def simplify_coordinates(
     if len(coords) <= 2:
         return coords
 
+    # Remove consecutive duplicate points to avoid division by zero
+    cleaned_coords = []
+    for i, coord in enumerate(coords):
+        if i == 0 or coord != coords[i - 1]:
+            cleaned_coords.append(coord)
+
+    # If we removed too many points, return the cleaned list
+    if len(cleaned_coords) <= 2:
+        return cleaned_coords
+
     def perpendicular_distance(
         point: list[float], line_start: list[float], line_end: list[float]
     ) -> float:
@@ -90,7 +122,13 @@ def simplify_coordinates(
         B = y2 - y1
         C = x1 * y2 - x2 * y1
 
-        distance = abs(A * y0 - B * x0 + C) / (A * A + B * B) ** 0.5
+        # Check if the line segment has zero length (start and end points are the same)
+        denominator = A * A + B * B
+        if denominator == 0:
+            # Line segment has zero length, return distance to the point
+            return ((x0 - x1) ** 2 + (y0 - y1) ** 2) ** 0.5
+
+        distance = abs(A * y0 - B * x0 + C) / (denominator**0.5)
         return distance
 
     def douglas_peucker(
@@ -124,7 +162,7 @@ def simplify_coordinates(
             # All points between first and last are within tolerance, return just endpoints
             return [coords_segment[0], coords_segment[-1]]
 
-    return douglas_peucker(coords, tolerance)
+    return douglas_peucker(cleaned_coords, tolerance)
 
 
 def reduce_precision(
@@ -168,60 +206,103 @@ def simplify_geometry(
     dict[str, Any]
         Simplified geometry object
     """
-    if geometry["type"] == "Polygon":
-        simplified_coords = []
-        for ring in geometry["coordinates"]:
-            # Simplify the ring
-            simplified_ring = simplify_coordinates(ring, tolerance)
-            # Reduce precision
-            simplified_ring = reduce_precision(simplified_ring, precision)
-            # Ensure polygon is closed (first and last points are the same)
-            if simplified_ring[0] != simplified_ring[-1]:
-                simplified_ring.append(simplified_ring[0])
-            simplified_coords.append(simplified_ring)
-
-        return {"type": "Polygon", "coordinates": simplified_coords}
-
-    elif geometry["type"] == "MultiPolygon":
-        simplified_coords = []
-        for polygon in geometry["coordinates"]:
-            simplified_polygon = []
-            for ring in polygon:
+    try:
+        if geometry["type"] == "Polygon":
+            simplified_coords = []
+            for ring in geometry["coordinates"]:
+                # Simplify the ring
                 simplified_ring = simplify_coordinates(ring, tolerance)
+                # Reduce precision
                 simplified_ring = reduce_precision(simplified_ring, precision)
-                if simplified_ring[0] != simplified_ring[-1]:
+                # Ensure polygon is closed (first and last points are the same)
+                if (
+                    len(simplified_ring) > 0
+                    and simplified_ring[0] != simplified_ring[-1]
+                ):
                     simplified_ring.append(simplified_ring[0])
-                simplified_polygon.append(simplified_ring)
-            simplified_coords.append(simplified_polygon)
+                simplified_coords.append(simplified_ring)
 
-        return {"type": "MultiPolygon", "coordinates": simplified_coords}
+            return {"type": "Polygon", "coordinates": simplified_coords}
 
-    elif geometry["type"] == "LineString":
-        simplified_coords = simplify_coordinates(geometry["coordinates"], tolerance)
-        simplified_coords = reduce_precision(simplified_coords, precision)
+        elif geometry["type"] == "MultiPolygon":
+            simplified_coords = []
+            for polygon in geometry["coordinates"]:
+                simplified_polygon = []
+                for ring in polygon:
+                    simplified_ring = simplify_coordinates(ring, tolerance)
+                    simplified_ring = reduce_precision(simplified_ring, precision)
+                    if (
+                        len(simplified_ring) > 0
+                        and simplified_ring[0] != simplified_ring[-1]
+                    ):
+                        simplified_ring.append(simplified_ring[0])
+                    simplified_polygon.append(simplified_ring)
+                simplified_coords.append(simplified_polygon)
 
-        return {"type": "LineString", "coordinates": simplified_coords}
+            return {"type": "MultiPolygon", "coordinates": simplified_coords}
 
-    elif geometry["type"] == "MultiLineString":
-        simplified_coords = []
-        for line in geometry["coordinates"]:
-            simplified_line = simplify_coordinates(line, tolerance)
-            simplified_line = reduce_precision(simplified_line, precision)
-            simplified_coords.append(simplified_line)
+        elif geometry["type"] == "LineString":
+            simplified_coords = simplify_coordinates(geometry["coordinates"], tolerance)
+            simplified_coords = reduce_precision(simplified_coords, precision)
 
-        return {"type": "MultiLineString", "coordinates": simplified_coords}
+            return {"type": "LineString", "coordinates": simplified_coords}
 
-    else:
-        # For Point, MultiPoint, or unknown types, just reduce precision
+        elif geometry["type"] == "MultiLineString":
+            simplified_coords = []
+            for line in geometry["coordinates"]:
+                simplified_line = simplify_coordinates(line, tolerance)
+                simplified_line = reduce_precision(simplified_line, precision)
+                simplified_coords.append(simplified_line)
+
+            return {"type": "MultiLineString", "coordinates": simplified_coords}
+
+        else:
+            # For Point, MultiPoint, or unknown types, just reduce precision
+            if "coordinates" in geometry:
+                if geometry["type"] == "Point":
+                    geometry["coordinates"] = reduce_precision(
+                        [geometry["coordinates"]], precision
+                    )[0]
+                elif geometry["type"] == "MultiPoint":
+                    geometry["coordinates"] = reduce_precision(
+                        geometry["coordinates"], precision
+                    )
+
+            return geometry
+
+    except Exception as e:
+        # If simplification fails, return the original geometry with just precision reduction
+        print(
+            f"Warning: Simplification failed for geometry type {geometry.get('type', 'unknown')}: {e}"
+        )
         if "coordinates" in geometry:
-            if geometry["type"] == "Point":
-                geometry["coordinates"] = reduce_precision(
-                    [geometry["coordinates"]], precision
-                )[0]
-            elif geometry["type"] == "MultiPoint":
-                geometry["coordinates"] = reduce_precision(
-                    geometry["coordinates"], precision
-                )
+            if geometry["type"] == "Polygon":
+                simplified_coords = []
+                for ring in geometry["coordinates"]:
+                    simplified_ring = reduce_precision(ring, precision)
+                    simplified_coords.append(simplified_ring)
+                return {"type": "Polygon", "coordinates": simplified_coords}
+            elif geometry["type"] == "MultiPolygon":
+                simplified_coords = []
+                for polygon in geometry["coordinates"]:
+                    simplified_polygon = []
+                    for ring in polygon:
+                        simplified_ring = reduce_precision(ring, precision)
+                        simplified_polygon.append(simplified_ring)
+                    simplified_coords.append(simplified_polygon)
+                return {"type": "MultiPolygon", "coordinates": simplified_coords}
+            else:
+                # For other types, just reduce precision
+                geometry_copy = geometry.copy()
+                if geometry["type"] == "Point":
+                    geometry_copy["coordinates"] = reduce_precision(
+                        [geometry["coordinates"]], precision
+                    )[0]
+                else:
+                    geometry_copy["coordinates"] = reduce_precision(
+                        geometry["coordinates"], precision
+                    )
+                return geometry_copy
 
         return geometry
 
@@ -497,7 +578,7 @@ def process_model_version(
 
     print(f"Processing {len(valid_geojson_files)} valid GeoJSON files")
 
-    # Define output paths in the dedicated output directory
+    # Define output paths in the dedicated output directory - keep as uncompressed JSON
     combined_geojson_path = str(Path(output_dir) / f"{version_name}_basins.geojson")
 
     # Combine all GeoJSON files with simplification
@@ -505,8 +586,8 @@ def process_model_version(
         valid_geojson_files, combined_geojson_path, simplify, tolerance, precision
     )
 
-    # Compress the combined GeoJSON
-    compress_geojson(combined_geojson_path)
+    # Skip compression - keep files as .geojson for easier access
+    print(f"Successfully processed {yaml_file} - output: {combined_geojson_path}")
 
     print(f"Successfully processed {yaml_file}")
 
