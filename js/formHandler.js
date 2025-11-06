@@ -12,7 +12,10 @@ function updateGridPointDisplay() {
 
     const gridData = calculateGridPoints(extentX, extentY, extentLatlonSpacing, extentZmax, extentZmin, extentZSpacing, originLat);
     const approxRunTimeMin = calculateApproxRunTime(gridData.totalGridPoints) / 60.0;
-    const modelSizeGB = 4 * gridData.totalGridPoints / 1e9;
+    const bytesPerCell = (3 * 4) + 1; // vp, vs, rho (float32) + inbasin (int8)
+    const propertiesBytes = gridData.totalGridPoints * bytesPerCell;
+    const latLonBytes = gridData.nx * gridData.ny * 2 * 8; // lat/lon float64 arrays
+    const modelSizeGB = (propertiesBytes + latLonBytes) / 1e9;
 
     // Use Number.toLocaleString() for better readability of large numbers
     const formatNumber = (num) => isNaN(num) ? '---' : num.toLocaleString();
