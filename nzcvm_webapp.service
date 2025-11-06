@@ -39,7 +39,7 @@ ExecStartPre=/usr/bin/bash -c '\
   if [ ! -d /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data ]; then \
     git clone --branch main --single-branch https://github.com/ucgmsim/nzcvm_data.git /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data; \
   else \
-    cd /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data && git fetch && git lfs pull;\
+    cd /mnt/mantle_data/nzcvm_webapp/src/nzcvm_data && git fetch && git pull && git lfs pull;\
   fi'
 
 # Use instructions in docker-compose.yml to pull the latest Docker container images 
