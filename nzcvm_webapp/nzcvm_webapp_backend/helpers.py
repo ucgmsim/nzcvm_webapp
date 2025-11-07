@@ -72,6 +72,7 @@ def run_nzcvm_process(config_path: Path, output_dir: Path) -> None:
             nzcvm_cfg_path=config_path,
             out_dir=output_dir,
             output_format="HDF5",
+            np_workers=2,
         )
         logger.info("NZCVM process completed successfully via direct call.")
     except Exception as e:
