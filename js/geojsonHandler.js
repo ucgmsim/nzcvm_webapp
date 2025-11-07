@@ -46,6 +46,9 @@ function populateModelVersionDropdown() {
         const option = document.createElement('option');
         option.value = modelVersion.geojson_file; // Use geojson filename as value
         option.textContent = modelVersion.display_version; // Display formatted version
+        if (modelVersion.version) {
+            option.dataset.modelVersion = modelVersion.version.replace('p', '.');
+        }
         dropdown.appendChild(option);
     });
 }

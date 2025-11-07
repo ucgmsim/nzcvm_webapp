@@ -3,16 +3,39 @@
 // Global variable to hold the timer interval ID
 let countdownIntervalId = null;
 
+function getSelectedModelVersion() {
+    const dropdown = document.getElementById('model-version');
+    if (!dropdown || dropdown.selectedIndex < 0) {
+        return null;
+    }
+
+    const selectedOption = dropdown.options[dropdown.selectedIndex];
+    const versionFromDataset = selectedOption?.dataset?.modelVersion;
+    if (versionFromDataset) {
+        return versionFromDataset;
+    }
+
+    const versionFromValue = selectedOption?.value;
+    if (versionFromValue) {
+        const match = versionFromValue.match(/(\d+)p(\d+)(_[^.]*)?_basins\.geojson(?:\.gz)?$/);
+        if (match) {
+            const descriptor = match[3] || '';
+            return `${match[1]}.${match[2]}${descriptor}`;
+        }
+    }
+
+    const versionText = selectedOption?.textContent?.trim();
+
+    return versionText || null;
+}
+
 // Function to collect all configuration data from the form for config file download
 function getConfigurationDataForFile() {
-    const selectedFilename = document.getElementById('model-version').value;
-    // Extract version from geojson filename (e.g., "2p03_basins.geojson.gz" -> "2.03")
-    const versionMatch = selectedFilename.match(/(\d+)p(\d+)_basins\.geojson\.gz/);
-    const modelVersion = versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
+    const modelVersion = getSelectedModelVersion();
 
     return {
         'CALL_TYPE': 'GENERATE_VELOCITY_MOD',
-        'MODEL_VERSION': modelVersion,
+        ...(modelVersion ? { 'MODEL_VERSION': modelVersion } : {}),
         'ORIGIN_LAT': parseFloat(document.getElementById('origin-lat').value),
         'ORIGIN_LON': parseFloat(document.getElementById('origin-lon').value),
         'EXTENT_X': parseFloat(document.getElementById('extent-x').value),
@@ -184,14 +207,11 @@ async function generateModelAndDownload() {
     }
 
     // Collect form data for the API request
+    const modelVersion = getSelectedModelVersion();
+
     const formData = {
         CALL_TYPE: 'GENERATE_VELOCITY_MOD',
-        MODEL_VERSION: (() => {
-            const selectedFilename = document.getElementById('model-version').value;
-            // Extract version from geojson filename (e.g., "2p03_basins.geojson.gz" -> "2.03")
-            const versionMatch = selectedFilename.match(/(\d+)p(\d+)_basins\.geojson\.gz/);
-            return versionMatch ? `${versionMatch[1]}.${versionMatch[2]}` : '2.03'; // fallback
-        })(),
+        ...(modelVersion ? { MODEL_VERSION: modelVersion } : {}),
         ORIGIN_LAT: parseFloat(document.getElementById('origin-lat').value),
         ORIGIN_LON: parseFloat(document.getElementById('origin-lon').value),
         ORIGIN_ROT: parseFloat(document.getElementById('rotation').value),
